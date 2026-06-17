@@ -2,11 +2,15 @@
  * Feature 1: Close Federated Read Scope Gaps
  *
  * Tests that engine.getChunks (and by extension getRawData, getVersions —
- * same pattern) correctly honours sourceIds[] for federated read grants,
- * sourceId for scalar scope, and precedence of sourceIds over sourceId.
+ * same sourceId/sourceIds branching pattern) correctly honours sourceIds[]
+ * for federated read grants, sourceId for scalar scope, and precedence of
+ * sourceIds over sourceId.
  *
  * Uses hermetic PGLite (no DATABASE_URL needed). Only getChunks is covered
- * here since the SQL pattern is identical across the three engine methods.
+ * directly — getRawData has an extra `source` parameter (4-way combinatorial
+ * filter) and getVersions has the same 3-branch structure. Postgres parity
+ * is asserted structurally (same 3-branch SQL shape) but requires DATABASE_URL
+ * for E2E coverage (test/e2e/ postgres test pattern).
  */
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from 'bun:test';
 import { PGLiteEngine } from '../src/core/pglite-engine.ts';
@@ -100,6 +104,11 @@ describe('getChunks federated read scope', () => {
 
   test('6. no opts = unscoped (back-compat), returns all sources', async () => {
     const chunks = await engine.getChunks('shared-page');
+    expect(chunks.length).toBe(2);
+  });
+
+  test('6b. empty sourceIds: [] = unscoped (matches sourceScopeOpts convention)', async () => {
+    const chunks = await engine.getChunks('shared-page', { sourceIds: [] });
     expect(chunks.length).toBe(2);
   });
 });

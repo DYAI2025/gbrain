@@ -2483,10 +2483,7 @@ const revert_version: Operation = {
   scope: 'write',
   handler: async (ctx, p) => {
     if (ctx.dryRun) return { dry_run: true, action: 'revert_version', slug: p.slug, version_id: p.version_id };
-    // v0.31.8 (D7): thread ctx.sourceId so multi-source brains revert the
-    // intended page row instead of whichever same-slug row Postgres returns
-    // first.
-    const sourceOpts = ctx.sourceId ? { sourceId: ctx.sourceId } : {};
+    const sourceOpts = sourceScopeOpts(ctx);
     await ctx.engine.createVersion(p.slug as string, sourceOpts);
     await ctx.engine.revertToVersion(p.slug as string, p.version_id as number, sourceOpts);
     return { status: 'reverted' };
