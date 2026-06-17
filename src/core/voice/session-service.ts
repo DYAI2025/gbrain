@@ -1,6 +1,23 @@
 import type { STTAdapter, AudioInput } from './stt.ts';
 import type { TTSAdapter } from './tts.ts';
 
+export function buildVoiceSessionPageInput(
+  session: VoiceSessionPage,
+  opts?: { tags?: string[]; provenance?: Record<string, unknown> },
+): Record<string, unknown> {
+  return {
+    title: session.slug,
+    type: 'voice_session',
+    compiled_truth: session.content,
+    frontmatter: {
+      type: 'voice_session',
+      source: 'voice',
+      session_id: session.slug,
+      ...opts?.provenance,
+    },
+  };
+}
+
 export class SessionError extends Error {
   constructor(message: string) {
     super(message);

@@ -5062,7 +5062,7 @@ const voice_process: Operation = {
     tags: { type: 'string', description: 'Comma-separated tags' },
   },
   handler: async (ctx, p) => {
-    const { VoiceSessionService } = await import('./voice/session-service.ts');
+    const { VoiceSessionService, buildVoiceSessionPageInput } = await import('./voice/session-service.ts');
     const engine = ctx.engine;
     if (!engine) throw new Error('Engine required for voice_process');
 
@@ -5080,12 +5080,9 @@ const voice_process: Operation = {
       stt,
       tts,
       onSave: async (session) => {
-        await engine.putPage(session.slug, {
-          title: session.slug,
-          type: 'concept',
-          content: session.content,
-          tags: ['voice'],
-        } as any);
+        const pageInput = buildVoiceSessionPageInput(session, { tags: ['voice'] });
+        await engine.putPage(session.slug, pageInput);
+        await engine.addTag(session.slug, 'voice');
       },
     });
     const audio = { buffer: new Uint8Array(buf).buffer as ArrayBuffer, mimeType: 'audio/webm' };

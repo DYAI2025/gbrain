@@ -3,7 +3,7 @@ import { loadConfig } from '../core/config.ts';
 import type { BrainEngine } from '../core/engine.ts';
 import { MockSTTAdapter, DeepgramSTTAdapter } from '../core/voice/stt.ts';
 import { MockTTSAdapter, SupertonicTTSAdapter } from '../core/voice/tts.ts';
-import { VoiceSessionService } from '../core/voice/session-service.ts';
+import { VoiceSessionService, buildVoiceSessionPageInput } from '../core/voice/session-service.ts';
 import { consolidateVoiceSession } from '../core/voice/consolidation.ts';
 import { PostgresGraphAdapter } from '../core/graph/pg-adapter.ts';
 
@@ -64,11 +64,8 @@ export async function runVoice(engine: BrainEngine, args: string[]): Promise<voi
       const audioBuf = readFileSync(filePath);
 
       const onSave = async (session: { slug: string; content: string }) => {
-        await engine.putPage(session.slug, {
-          title: session.slug,
-          type: 'concept',
-          compiled_truth: session.content,
-        } as any);
+        const pageInput = buildVoiceSessionPageInput(session);
+        await engine.putPage(session.slug, pageInput);
         await engine.addTag(session.slug, 'voice');
         const v = config?.voice?.page_title_prefix;
         if (v) {
@@ -95,7 +92,7 @@ export async function runVoice(engine: BrainEngine, args: string[]): Promise<voi
     }
     case 'consolidate': {
       const pages = await engine.listPages({ limit: 50 });
-      const voicePages = pages.filter(p => p.type === 'concept' && p.title.startsWith('voice-session-'));
+      const voicePages = pages.filter(p => p.type === 'voice_session' && p.title.startsWith('voice-session-'));
 
       const graph = new PostgresGraphAdapter(engine as any);
       let consolidated = 0;
