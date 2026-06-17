@@ -31,14 +31,35 @@ export class SupertonicTTSAdapter implements TTSAdapter {
   private baseUrl: string;
 
   constructor(baseUrl: string = 'http://localhost:8080/v1') {
-    this.baseUrl = baseUrl;
+    this.baseUrl = baseUrl.replace(/\/+$/, '');
   }
 
   isAvailable(): boolean {
     return true;
   }
 
-  async synthesize(_text: string, _voice?: string): Promise<ArrayBuffer> {
-    throw new Error('Supertonic TTS not implemented in MVP');
+  async synthesize(text: string, voice?: string): Promise<ArrayBuffer> {
+    const url = `${this.baseUrl}/audio/speech`;
+    const body = JSON.stringify({
+      model: 'tts-1',
+      input: text,
+      voice: voice ?? 'alloy',
+      response_format: 'wav',
+    });
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body,
+    });
+
+    if (!response.ok) {
+      const status = response.status;
+      const bodyText = await response.text().catch(() => '');
+      const detail = bodyText ? `: ${bodyText.slice(0, 200)}` : '';
+      throw new Error(`Supertonic TTS HTTP ${status}${detail}`);
+    }
+
+    return response.arrayBuffer();
   }
 }
