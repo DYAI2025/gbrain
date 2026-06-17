@@ -2005,6 +2005,16 @@ async function handleCliOnly(command: string, args: string[]) {
         await runSources(engine, args);
         break;
       }
+      case 'voice': {
+        const { runVoice } = await import('./commands/voice.ts');
+        await runVoice(engine, args);
+        break;
+      }
+      case 'freshness': {
+        const { runFreshness } = await import('./commands/freshness.ts');
+        await runFreshness(engine, args);
+        break;
+      }
     }
   } finally {
     syncWatchdog?.dispose(); // #1633: tear down the hard-deadline watchdog on clean exit
