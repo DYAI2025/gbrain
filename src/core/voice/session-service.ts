@@ -21,7 +21,7 @@ export function buildVoiceSessionPageInput(
 }
 
 export async function persistVoiceSession(
-  engine: { putPage(slug: string, data: Record<string, unknown>): Promise<void>; addTag(slug: string, tag: string): Promise<void> },
+  engine: { putPage(slug: string, data: Record<string, unknown>): Promise<unknown>; addTag(slug: string, tag: string): Promise<unknown> },
   session: VoiceSessionPage,
   extraTags?: string[],
 ): Promise<void> {

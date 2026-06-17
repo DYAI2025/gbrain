@@ -148,7 +148,10 @@ describe('consolidateVoiceSession integration (PGLite)', () => {
     const { MockTTSAdapter } = await import('../src/core/voice/tts.ts');
 
     const onSave = async (session: { slug: string; content: string }) => {
-      await persistVoiceSession(engine, session);
+      await persistVoiceSession({
+        putPage: async (slug, data) => { await (engine as any).putPage(slug, data); },
+        addTag: async (slug, tag) => { await engine.addTag(slug, tag); },
+      }, session);
     };
 
     const service = new VoiceSessionService({

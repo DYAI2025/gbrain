@@ -5081,7 +5081,8 @@ const voice_process: Operation = {
       stt,
       tts,
       onSave: async (session) => {
-        await persistVoiceSession(engine, session);
+        const eng = engine as unknown as { putPage(slug: string, data: Record<string, unknown>): Promise<unknown>; addTag(slug: string, tag: string): Promise<unknown> };
+        await persistVoiceSession(eng, session);
       },
     });
     const audio = { buffer: new Uint8Array(buf).buffer as ArrayBuffer, mimeType: 'audio/webm' };

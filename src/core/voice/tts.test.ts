@@ -35,8 +35,8 @@ describe('SupertonicTTSAdapter', () => {
   beforeAll(() => {
     originalFetch = globalThis.fetch;
     capturedRequests = [];
-    globalThis.fetch = async (input, init) => {
-      const url = typeof input === 'string' ? input : input.url;
+    globalThis.fetch = (async (input: any, init?: any) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input);
       capturedRequests.push({
         url,
         method: init?.method ?? 'GET',
@@ -51,9 +51,8 @@ describe('SupertonicTTSAdapter', () => {
         }
         return new Response('Not Found', { status: 404 });
       }
-      // Pass through to real fetch for non-mock URLs (e.g., connection refused)
       return originalFetch(input, init);
-    };
+    }) as unknown as typeof globalThis.fetch;
   });
 
   afterAll(() => {

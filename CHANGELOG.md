@@ -4,6 +4,17 @@ All notable changes to GBrain will be documented in this file.
 
 ## [0.42.47.0] - 2026-06-16
 
+### Added
+- **Federated read scope gaps closed:** `getChunks`, `getRawData`, `getVersions` now accept `sourceIds?: string[]` with 3-branch SQL in both PGLite and Postgres engines. `get_chunks`, `get_raw_data`, `get_versions`, `resolve_slugs`, `revert_version` handlers route through `sourceScopeOpts(ctx)`. 10 hermetic PGLite tests.
+- **Deepgram STT adapter:** POSTs audio binary to `/v1/listen` with `Authorization: Token` header. Parses transcript, confidence, word-level segments. HTTP errors throw descriptive messages. `fileRef` audio input rejected with actionable error.
+- **Supertonic TTS adapter:** POSTs JSON to `/audio/speech` using OpenAI-compatible schema. Configurable base URL (default `http://localhost:8080/v1`). HTTP errors throw with status + truncated body.
+- **Brain-aware voice sessions:** Optional `contextProvider` DI on `VoiceSessionService`. When provided, answer replaces default summary for TTS + page content; provider errors degrade safely to summary. New `## Answer` section in page markdown.
+- **Version drift protection:** `openclaw.plugin.json` synced to `0.42.47.0`. New test `test/version-consistency.test.ts` asserts plugin version matches `package.json`.
+
+### Fixed
+- **Voice session persistence:** Pages now stored with `type: voice_session`, `compiled_truth`, and provenance frontmatter. Both MCP `voice_process` and CLI handler use shared `persistVoiceSession` helper. Tags persisted via `engine.addTag`.
+- **Voice consolidation filter:** CLI `consolidate` handler targets `type === 'voice_session'` (was `type === 'concept'`).
+
 **A brain now travels with its own operating manual, and gbrain finally tells you how to run it better (gbrain#2180).** Two long-standing gaps closed. First: a brain repo can carry its own skillpack — skills authored for and versioned with that specific brain — and any harness that connects is offered it. Connect a fresh Claude Code or a thin client to a mature brain and it learns, on the spot, which meeting-ingestion or diligence protocol the brain expects, instead of starting blind. Second: gbrain stops being purely passive. `gbrain advisor` reads the brain's own state and hands back a ranked, read-only list of high-leverage actions — pending migrations, version drift, stalled backfills, low embedding coverage, setup smells — each with the exact command to fix it. It never acts on its own; it shows you and asks.
 
 Discovery works on both connection topologies. Add a federated source that ships a brain-resident pack and gbrain prints what's in it and how to install it (with bounded, escalate-then-suppress nagging while it stays uninstalled — it never nags off a cron or an MCP call, only a real CLI prompt). Over MCP, a connecting agent calls `list_brain_skillpack` (source-scoped, so a multi-source brain attributes each pack to its source) and `get_skill --source_id` to fetch a specific pack skill. The advisor is also available over MCP behind its own gate, read-only, so a thin client can coach you in its own voice without ever exposing a fix it could run itself.

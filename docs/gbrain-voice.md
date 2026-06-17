@@ -26,8 +26,8 @@ const result = await service.processAudio(audio, { tags: ['person:alice'] });
 |---------|-------------|-------|
 | `MockSTTAdapter` | `(opts?: { delayMs?, fail?, language? })` | Returns canned transcript "This is a mock transcription..." |
 | `MockTTSAdapter` | `(opts?: { delayMs?, fail? })` | Returns 64-byte empty ArrayBuffer |
-| `DeepgramSTTAdapter` | `(apiKey: string)` | `transcribe()` throws in MVP — implement the call |
-| `SupertonicTTSAdapter` | `(baseUrl?: string)` | Default `http://localhost:8080/v1`; `synthesize()` throws in MVP |
+| `DeepgramSTTAdapter` | `(apiKey: string, baseUrl?: string)` | Default `https://api.deepgram.com/v1`; POSTs audio binary to `/listen` |
+| `SupertonicTTSAdapter` | `(baseUrl?: string)` | Default `http://localhost:8080/v1`; POSTs text to `/audio/speech` |
 
 **No env vars required.** Adapters use constructor injection. The mock adapters
 work out of the box — no keys, no network.
@@ -38,22 +38,23 @@ work out of the box — no keys, no network.
 1. processAudio(audio, context?)
    ├── stt.transcribe(audio)     → transcript text
    ├── generateSummary(text)     → first 200 chars (or full if ≤200)
-   ├── build answer text          → "I processed your input about: {first 100 chars}"
+   ├── contextProvider?          → brain-aware answer (optional DI, falls back to summary on error)
    ├── tts.synthesize(answer)    → audio ArrayBuffer (empty on failure)
    ├── buildPageContent()        → markdown with YAML frontmatter
    └── onSave({slug, content})   → caller persists the page
 ```
 
-Page frontmatter:
+Page frontmatter (stored via `putPage` with `type: voice_session`):
 ```yaml
----
 type: voice_session
-source: voice
-confidence: 0.7
-consent: true
-slug: "voice-session-{timestamp}-{random}"
-title: "Voice Session"
-tags: ["person:alice"]
+compiled_truth: "... full markdown content ..."
+frontmatter:
+  type: voice_session
+  source: voice
+  confidence: 0.6
+  consent: false
+  session_id: "voice-session-{timestamp}-{random}"
+tags: ["voice", "person:alice"]
 ---
 
 ## Transcript
@@ -61,6 +62,9 @@ tags: ["person:alice"]
 
 ## Summary
 ... first 200 chars ...
+
+## Answer
+... context-aware answer (only when contextProvider is configured) ...
 ```
 
 ## Consolidation Rules

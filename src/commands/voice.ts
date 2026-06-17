@@ -67,7 +67,8 @@ export async function runVoice(engine: BrainEngine, args: string[]): Promise<voi
         const extra: string[] = [];
         const prefix = config?.voice?.page_title_prefix;
         if (prefix) extra.push(prefix);
-        await persistVoiceSession(engine, session, extra);
+        const eng = engine as unknown as { putPage(slug: string, data: Record<string, unknown>): Promise<unknown>; addTag(slug: string, tag: string): Promise<unknown> };
+        await persistVoiceSession(eng, session, extra);
       };
 
       const vCfg = config?.voice;

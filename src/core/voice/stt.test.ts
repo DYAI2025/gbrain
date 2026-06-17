@@ -47,16 +47,15 @@ describe('DeepgramSTTAdapter', () => {
 
   beforeAll(() => {
     originalFetch = globalThis.fetch;
-    globalThis.fetch = async (input, init) => {
+    globalThis.fetch = (async (input: any, init?: any) => {
       const headers = new Headers(init?.headers);
       capturedAuthorization = headers.get('authorization') ?? '';
-      const url = typeof input === 'string' ? input : input.url;
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input);
       const parsed = new URL(url);
       if (parsed.hostname === 'api.deepgram.com') {
         if (!parsed.pathname.endsWith('/listen')) {
           return new Response('Not Found', { status: 404 });
         }
-        // Simulate Deepgram response
         const body = JSON.stringify({
           results: {
             channels: [
@@ -81,7 +80,7 @@ describe('DeepgramSTTAdapter', () => {
         });
       }
       return originalFetch(input, init);
-    };
+    }) as unknown as typeof globalThis.fetch;
   });
 
   afterAll(() => {
@@ -130,10 +129,8 @@ describe('DeepgramSTTAdapter', () => {
   test('transcribe throws on HTTP error', async () => {
     const adapter = new DeepgramSTTAdapter('invalid-key');
     const audio: AudioInput = { buffer: new ArrayBuffer(256), mimeType: 'audio/wav' };
-    // The mock returns 404 for non-/listen paths; we need a 401 scenario
-    // Override fetch for this test
     const originalFetch2 = globalThis.fetch;
-    globalThis.fetch = async () => new Response('Unauthorized', { status: 401 });
+    globalThis.fetch = (async () => new Response('Unauthorized', { status: 401 })) as unknown as typeof globalThis.fetch;
     try {
       await expect(adapter.transcribe(audio)).rejects.toThrow('Deepgram STT HTTP 401');
     } finally {
@@ -144,8 +141,7 @@ describe('DeepgramSTTAdapter', () => {
   test('transcribe throws on malformed response (missing results)', async () => {
     const adapter = new DeepgramSTTAdapter('test-api-key');
     const originalFetch2 = globalThis.fetch;
-    globalThis.fetch = async () =>
-      new Response(JSON.stringify({}), { headers: { 'content-type': 'application/json' } });
+    globalThis.fetch = (async () => new Response(JSON.stringify({}), { headers: { 'content-type': 'application/json' } })) as unknown as typeof globalThis.fetch;
     try {
       await expect(adapter.transcribe({ buffer: new ArrayBuffer(128), mimeType: 'audio/wav' })).rejects.toThrow(
         'Deepgram STT',
@@ -159,7 +155,7 @@ describe('DeepgramSTTAdapter', () => {
     const adapter = new DeepgramSTTAdapter('test-api-key');
     const audio: AudioInput = { buffer: new ArrayBuffer(256), mimeType: 'audio/wav' };
     const originalFetch2 = globalThis.fetch;
-    globalThis.fetch = async () => { throw new Error('network error'); };
+    globalThis.fetch = (async () => { throw new Error('network error'); }) as unknown as typeof globalThis.fetch;
     try {
       await expect(adapter.transcribe(audio)).rejects.toThrow('network error');
     } finally {
