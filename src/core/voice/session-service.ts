@@ -1,12 +1,56 @@
 import type { STTAdapter, AudioInput } from './stt.ts';
 import type { TTSAdapter } from './tts.ts';
 
+export function buildVoiceSessionPageInput(
+  session: VoiceSessionPage,
+  provenance?: Record<string, unknown>,
+): Record<string, unknown> {
+  return {
+    title: session.slug,
+    type: 'voice_session',
+    compiled_truth: session.content,
+    frontmatter: {
+      type: 'voice_session',
+      source: 'voice',
+      confidence: 0.6,
+      consent: false,
+      session_id: session.slug,
+      ...provenance,
+    },
+  };
+}
+
+export async function persistVoiceSession(
+  engine: { putPage(slug: string, data: Record<string, unknown>): Promise<unknown>; addTag(slug: string, tag: string): Promise<unknown> },
+  session: VoiceSessionPage,
+  extraTags?: string[],
+): Promise<void> {
+  const input = buildVoiceSessionPageInput(session);
+  await engine.putPage(session.slug, input);
+  await engine.addTag(session.slug, 'voice');
+  if (extraTags) {
+    for (const tag of extraTags) {
+      await engine.addTag(session.slug, tag);
+    }
+  }
+}
+
 export class SessionError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'SessionError';
   }
 }
+
+export interface ContextProviderResult {
+  answer: string;
+  citations?: unknown[];
+}
+
+export type ContextProvider = (
+  transcript: string,
+  context?: { title?: string; tags?: string[] },
+) => Promise<ContextProviderResult>;
 
 export interface VoiceSessionResult {
   sessionId: string;
@@ -37,15 +81,18 @@ export class VoiceSessionService {
   private stt: STTAdapter;
   private tts: TTSAdapter;
   private onSave?: (session: VoiceSessionPage) => Promise<void>;
+  private contextProvider?: ContextProvider;
 
   constructor(opts: {
     stt: STTAdapter;
     tts: TTSAdapter;
     onSave?: (session: VoiceSessionPage) => Promise<void>;
+    contextProvider?: ContextProvider;
   }) {
     this.stt = opts.stt;
     this.tts = opts.tts;
     this.onSave = opts.onSave;
+    this.contextProvider = opts.contextProvider;
   }
 
   async processAudio(
@@ -68,7 +115,17 @@ export class VoiceSessionService {
     const transcript = transcriptionResult.text;
     const summary = generateSummary(transcript);
 
-    const answer = `I processed your input about: ${transcript.slice(0, 100)}`;
+    let answer: string;
+    if (this.contextProvider) {
+      try {
+        const result = await this.contextProvider(transcript, context);
+        answer = result.answer;
+      } catch {
+        answer = summary;
+      }
+    } else {
+      answer = summary;
+    }
 
     let audioOutput: ArrayBuffer;
     try {
@@ -81,6 +138,7 @@ export class VoiceSessionService {
       title: context?.title ?? 'Voice Session',
       transcript,
       summary,
+      answer,
       tags,
       slug,
     });
@@ -92,7 +150,7 @@ export class VoiceSessionService {
     return {
       sessionId,
       transcript,
-      summary,
+      summary: answer,
       tags,
       audioOutput,
       pageContent,
@@ -104,11 +162,16 @@ function buildPageContent(opts: {
   title: string;
   transcript: string;
   summary: string;
+  answer?: string;
   tags: string[];
   slug: string;
 }): string {
   const tagsYaml = opts.tags.length > 0
     ? `\ntags: [${opts.tags.map(t => `"${t}"`).join(', ')}]`
+    : '';
+
+  const answerSection = opts.answer && opts.answer !== opts.summary
+    ? `\n\n## Answer\n\n${opts.answer}`
     : '';
 
   return [
@@ -129,6 +192,6 @@ function buildPageContent(opts: {
     '## Summary',
     '',
     opts.summary,
-    '',
+    answerSection,
   ].join('\n');
 }

@@ -55,16 +55,79 @@ export class MockSTTAdapter implements STTAdapter {
 
 export class DeepgramSTTAdapter implements STTAdapter {
   private apiKey: string;
+  private baseUrl: string;
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, baseUrl: string = 'https://api.deepgram.com/v1') {
     this.apiKey = apiKey;
+    this.baseUrl = baseUrl.replace(/\/+$/, '');
   }
 
   isAvailable(): boolean {
     return !!this.apiKey;
   }
 
-  async transcribe(_audio: AudioInput): Promise<TranscriptionResult> {
-    throw new Error('Deepgram transcription not implemented in MVP');
+  async transcribe(audio: AudioInput): Promise<TranscriptionResult> {
+    if ('fileRef' in audio) {
+      throw new Error(
+        'fileRef not supported by Deepgram STT; pass buffer + mimeType instead',
+      );
+    }
+
+    const url = `${this.baseUrl}/listen?model=nova-2`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        authorization: `Token ${this.apiKey}`,
+        'content-type': audio.mimeType,
+      },
+      body: audio.buffer,
+    });
+
+    if (!response.ok) {
+      const status = response.status;
+      const bodyText = await response.text().catch(() => '');
+      const detail = bodyText ? `: ${bodyText.slice(0, 200)}` : '';
+      throw new Error(`Deepgram STT HTTP ${status}${detail}`);
+    }
+
+    const data = await response.json() as {
+      results?: {
+        channels?: Array<{
+          alternatives?: Array<{
+            transcript?: string;
+            confidence?: number;
+            words?: Array<{
+              word: string;
+              start: number;
+              end: number;
+              confidence: number;
+            }>;
+          }>;
+        }>;
+      };
+      metadata?: { model_info?: { name?: string } };
+    };
+
+    const alt = data?.results?.channels?.[0]?.alternatives?.[0];
+    if (!alt?.transcript) {
+      throw new Error(
+        `Deepgram STT returned unexpected response: missing transcript in results`,
+      );
+    }
+
+    const segments: TranscriptionSegment[] | undefined = alt.words?.map((w) => ({
+      start: w.start,
+      end: w.end,
+      text: w.word,
+      confidence: w.confidence,
+    }));
+
+    return {
+      text: alt.transcript,
+      segments,
+      language: 'en',
+      confidence: alt.confidence ?? 0,
+      provider: 'deepgram',
+    };
   }
 }

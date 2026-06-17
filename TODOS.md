@@ -2,7 +2,7 @@
 
 ## gbrain#2200 federated-read follow-ups (filed v0.42.46.0)
 
-- [ ] **P1 — Close the federated-read scope on the remaining same-class by-slug read ops.**
+- [x] **P1 — Close the federated-read scope on the remaining same-class by-slug read ops.**
   v0.42.46.0 (#2200) routed `get_page` tags + `get_tags` / `get_links` / `get_backlinks` /
   `get_timeline` through the federated source scope and taught the engine methods to honor
   `sourceIds[]`. The adversarial review (Codex + Claude) flagged sibling read ops in the

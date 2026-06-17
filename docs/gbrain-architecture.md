@@ -53,8 +53,7 @@ API / MCP LAYER (thin wrappers — no business logic)
 | API/MCP | core | Constructor injection |
 
 **Core has zero cloud dependencies.** Adapters (Deepgram, Supertonic) live in core
-but throw "not implemented" in MVP — the interfaces exist for contract enforcement.
-Real providers need only implement `STTAdapter` / `TTSAdapter` and pass them in.
+with full HTTP implementations — mockable via `globalThis.fetch` overrides in tests.
 
 ## Key Interfaces
 
@@ -86,21 +85,25 @@ interface TTSAdapter {
 }
 ```
 
-## Data Flow — Voice Session
+## Data Flow — Voice Session (with optional brain context)
 
 ```
-Audio ─→ STT ─→ transcript ─→ search enrichment (optional via caller)
-                         ─→ summary (first 200 chars)
-                         ─→ answer text ─→ TTS ─→ audio ArrayBuffer
-                         ─→ buildPageContent() ─→ onSave(slug, content)
-                              writes a page with:
-                                type: voice_session
-                                source: voice
-                                confidence: 0.7
-                                ## Transcript
-                                ## Summary
+Audio ─→ STT ─→ transcript
+             ├─→ summary (first 200 chars)
+             ├─→ contextProvider? (optional DI) ─→ brain-aware answer
+             │                                    falls back to summary on error
+             ├─→ answer text ─→ TTS ─→ audio ArrayBuffer
+             └─→ buildPageContent()
+                   └─→ onSave(slug, content)
+                        writes a page with:
+                          type: voice_session, source: voice
+                          compiled_truth (persistVoiceSession helper)
+                          frontmatter with provenance (confidence, consent, source)
+                          ## Transcript, ## Summary, ## Answer (if provider used)
+                        tags: ["voice", "person:alice"] added via engine.addTag
 
 Later ─→ consolidateVoiceSession(session, graph)
+           Filters pages with type === 'voice_session'
            Parses tags matching /^(person|company|project):(.+)$/
            Creates MemoryNode per entity (confidence 0.6, consent false)
            Creates Relation("mentions") from session slug to entity slug

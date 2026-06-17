@@ -2164,14 +2164,24 @@ export class PGLiteEngine implements BrainEngine {
     );
   }
 
-  async getChunks(slug: string, opts?: { sourceId?: string }): Promise<Chunk[]> {
-    const sourceId = opts?.sourceId ?? 'default';
+  async getChunks(slug: string, opts?: { sourceId?: string; sourceIds?: string[] }): Promise<Chunk[]> {
+    const sourceIds = opts?.sourceIds;
+    const sourceId = opts?.sourceId;
+    const where: string[] = ['p.slug = $1'];
+    const params: unknown[] = [slug];
+    if (sourceIds && sourceIds.length > 0) {
+      params.push(sourceIds);
+      where.push(`p.source_id = ANY($${params.length}::text[])`);
+    } else if (sourceId) {
+      params.push(sourceId);
+      where.push(`p.source_id = $${params.length}`);
+    }
     const { rows } = await this.db.query(
       `SELECT cc.* FROM content_chunks cc
        JOIN pages p ON p.id = cc.page_id
-       WHERE p.slug = $1 AND p.source_id = $2
+       WHERE ${where.join(' AND ')}
        ORDER BY cc.chunk_index`,
-      [slug, sourceId]
+      params
     );
     return (rows as Record<string, unknown>[]).map(r => rowToChunk(r));
   }
@@ -3414,18 +3424,24 @@ export class PGLiteEngine implements BrainEngine {
   async getRawData(
     slug: string,
     source?: string,
-    opts?: { sourceId?: string },
+    opts?: { sourceId?: string; sourceIds?: string[] },
   ): Promise<RawData[]> {
     // v0.31.8 (D21): build WHERE clause dynamically. Without opts.sourceId,
     // no source filter (preserves pre-v0.31.8 cross-source read).
+    // v0.42+ (federated read scope): sourceIds[] wins over sourceId.
     const where: string[] = ['p.slug = $1'];
     const params: unknown[] = [slug];
     if (source) {
       params.push(source);
       where.push(`rd.source = $${params.length}`);
     }
-    if (opts?.sourceId) {
-      params.push(opts.sourceId);
+    const sourceIds = opts?.sourceIds;
+    const sourceId = opts?.sourceId;
+    if (sourceIds && sourceIds.length > 0) {
+      params.push(sourceIds);
+      where.push(`p.source_id = ANY($${params.length}::text[])`);
+    } else if (sourceId) {
+      params.push(sourceId);
       where.push(`p.source_id = $${params.length}`);
     }
     const result = await this.db.query(
@@ -4608,16 +4624,29 @@ export class PGLiteEngine implements BrainEngine {
     return rows[0] as unknown as PageVersion;
   }
 
-  async getVersions(slug: string, opts?: { sourceId?: string }): Promise<PageVersion[]> {
+  async getVersions(slug: string, opts?: { sourceId?: string; sourceIds?: string[] }): Promise<PageVersion[]> {
     // v0.31.8 (D16): two-branch. Without opts.sourceId, joins return versions
     // for every same-slug page (preserves pre-v0.31.8 cross-source view).
-    if (opts?.sourceId) {
+    // v0.42+ (federated read scope): sourceIds[] wins over sourceId.
+    const sourceIds = opts?.sourceIds;
+    const sourceId = opts?.sourceId;
+    if (sourceIds && sourceIds.length > 0) {
+      const { rows } = await this.db.query(
+        `SELECT pv.* FROM page_versions pv
+         JOIN pages p ON p.id = pv.page_id
+         WHERE p.slug = $1 AND p.source_id = ANY($2::text[])
+         ORDER BY pv.snapshot_at DESC`,
+        [slug, sourceIds]
+      );
+      return rows as unknown as PageVersion[];
+    }
+    if (sourceId) {
       const { rows } = await this.db.query(
         `SELECT pv.* FROM page_versions pv
          JOIN pages p ON p.id = pv.page_id
          WHERE p.slug = $1 AND p.source_id = $2
          ORDER BY pv.snapshot_at DESC`,
-        [slug, opts.sourceId]
+        [slug, sourceId]
       );
       return rows as unknown as PageVersion[];
     }

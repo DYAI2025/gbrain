@@ -2459,8 +2459,7 @@ const get_versions: Operation = {
     slug: { type: 'string', required: true },
   },
   handler: async (ctx, p) => {
-    // v0.31.8 (D20): thread ctx.sourceId.
-    const sourceOpts = ctx.sourceId ? { sourceId: ctx.sourceId } : {};
+    const sourceOpts = sourceScopeOpts(ctx);
     const versions = await ctx.engine.getVersions(p.slug as string, sourceOpts);
     // Same takes-allow-list privacy boundary as get_page. Snapshots persist
     // historical compiled_truth verbatim, including the takes fence, so
@@ -2484,10 +2483,7 @@ const revert_version: Operation = {
   scope: 'write',
   handler: async (ctx, p) => {
     if (ctx.dryRun) return { dry_run: true, action: 'revert_version', slug: p.slug, version_id: p.version_id };
-    // v0.31.8 (D7): thread ctx.sourceId so multi-source brains revert the
-    // intended page row instead of whichever same-slug row Postgres returns
-    // first.
-    const sourceOpts = ctx.sourceId ? { sourceId: ctx.sourceId } : {};
+    const sourceOpts = sourceScopeOpts(ctx);
     await ctx.engine.createVersion(p.slug as string, sourceOpts);
     await ctx.engine.revertToVersion(p.slug as string, p.version_id as number, sourceOpts);
     return { status: 'reverted' };
@@ -2552,8 +2548,7 @@ const get_raw_data: Operation = {
     source: { type: 'string', description: 'Filter by source' },
   },
   handler: async (ctx, p) => {
-    // v0.31.8 (D20 + D21): thread ctx.sourceId.
-    const sourceOpts = ctx.sourceId ? { sourceId: ctx.sourceId } : {};
+    const sourceOpts = sourceScopeOpts(ctx);
     return ctx.engine.getRawData(p.slug as string, p.source as string | undefined, sourceOpts);
   },
   scope: 'read',
@@ -2568,7 +2563,7 @@ const resolve_slugs: Operation = {
     partial: { type: 'string', required: true },
   },
   handler: async (ctx, p) => {
-    return ctx.engine.resolveSlugs(p.partial as string);
+    return ctx.engine.resolveSlugs(p.partial as string, sourceScopeOpts(ctx));
   },
   scope: 'read',
 };
@@ -2580,8 +2575,7 @@ const get_chunks: Operation = {
     slug: { type: 'string', required: true },
   },
   handler: async (ctx, p) => {
-    // v0.31.8 (D20): thread ctx.sourceId.
-    const sourceOpts = ctx.sourceId ? { sourceId: ctx.sourceId } : {};
+    const sourceOpts = sourceScopeOpts(ctx);
     return ctx.engine.getChunks(p.slug as string, sourceOpts);
   },
   scope: 'read',
@@ -5068,7 +5062,7 @@ const voice_process: Operation = {
     tags: { type: 'string', description: 'Comma-separated tags' },
   },
   handler: async (ctx, p) => {
-    const { VoiceSessionService } = await import('./voice/session-service.ts');
+    const { VoiceSessionService, buildVoiceSessionPageInput } = await import('./voice/session-service.ts');
     const engine = ctx.engine;
     if (!engine) throw new Error('Engine required for voice_process');
 
@@ -5082,16 +5076,13 @@ const voice_process: Operation = {
       : new (await import('./voice/tts.ts')).MockTTSAdapter();
     const buf = Buffer.from(p.audio_base64 as string, 'base64');
 
+    const { persistVoiceSession } = await import('./voice/session-service.ts');
     const service = new VoiceSessionService({
       stt,
       tts,
       onSave: async (session) => {
-        await engine.putPage(session.slug, {
-          title: session.slug,
-          type: 'concept',
-          content: session.content,
-          tags: ['voice'],
-        } as any);
+        const eng = engine as unknown as { putPage(slug: string, data: Record<string, unknown>): Promise<unknown>; addTag(slug: string, tag: string): Promise<unknown> };
+        await persistVoiceSession(eng, session);
       },
     });
     const audio = { buffer: new Uint8Array(buf).buffer as ArrayBuffer, mimeType: 'audio/webm' };

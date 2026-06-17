@@ -2215,15 +2215,33 @@ export class PostgresEngine implements BrainEngine {
     );
   }
 
-  async getChunks(slug: string, opts?: { sourceId?: string }): Promise<Chunk[]> {
+  async getChunks(slug: string, opts?: { sourceId?: string; sourceIds?: string[] }): Promise<Chunk[]> {
     const sql = this.sql;
-    const sourceId = opts?.sourceId ?? 'default';
-    const rows = await sql`
-      SELECT cc.* FROM content_chunks cc
-      JOIN pages p ON p.id = cc.page_id
-      WHERE p.slug = ${slug} AND p.source_id = ${sourceId}
-      ORDER BY cc.chunk_index
-    `;
+    const sourceIds = opts?.sourceIds;
+    const sourceId = opts?.sourceId;
+    let rows;
+    if (sourceIds && sourceIds.length > 0) {
+      rows = await sql`
+        SELECT cc.* FROM content_chunks cc
+        JOIN pages p ON p.id = cc.page_id
+        WHERE p.slug = ${slug} AND p.source_id = ANY(${sourceIds}::text[])
+        ORDER BY cc.chunk_index
+      `;
+    } else if (sourceId) {
+      rows = await sql`
+        SELECT cc.* FROM content_chunks cc
+        JOIN pages p ON p.id = cc.page_id
+        WHERE p.slug = ${slug} AND p.source_id = ${sourceId}
+        ORDER BY cc.chunk_index
+      `;
+    } else {
+      rows = await sql`
+        SELECT cc.* FROM content_chunks cc
+        JOIN pages p ON p.id = cc.page_id
+        WHERE p.slug = ${slug}
+        ORDER BY cc.chunk_index
+      `;
+    }
     return rows.map((r) => rowToChunk(r as Record<string, unknown>));
   }
 
@@ -3481,26 +3499,38 @@ export class PostgresEngine implements BrainEngine {
   async getRawData(
     slug: string,
     source?: string,
-    opts?: { sourceId?: string },
+    opts?: { sourceId?: string; sourceIds?: string[] },
   ): Promise<RawData[]> {
     const sql = this.sql;
     // v0.31.8 (D21): four-branch shape on (source provided, sourceId provided).
     // Postgres.js template-literal style doesn't compose fragments cleanly so
     // we enumerate.
+    // v0.42+ (federated read scope): sourceIds[] wins over sourceId.
+    const sourceIds = opts?.sourceIds;
     const sourceId = opts?.sourceId;
+    const hasSourceIds = sourceIds && sourceIds.length > 0;
+    const effectiveSourceId = hasSourceIds ? null : sourceId;
     let rows;
-    if (source && sourceId) {
+    if (source && hasSourceIds) {
       rows = await sql`SELECT rd.source, rd.data, rd.fetched_at FROM raw_data rd
         JOIN pages p ON p.id = rd.page_id
-        WHERE p.slug = ${slug} AND rd.source = ${source} AND p.source_id = ${sourceId}`;
+        WHERE p.slug = ${slug} AND rd.source = ${source} AND p.source_id = ANY(${sourceIds}::text[])`;
+    } else if (source && effectiveSourceId) {
+      rows = await sql`SELECT rd.source, rd.data, rd.fetched_at FROM raw_data rd
+        JOIN pages p ON p.id = rd.page_id
+        WHERE p.slug = ${slug} AND rd.source = ${source} AND p.source_id = ${effectiveSourceId}`;
     } else if (source) {
       rows = await sql`SELECT rd.source, rd.data, rd.fetched_at FROM raw_data rd
         JOIN pages p ON p.id = rd.page_id
         WHERE p.slug = ${slug} AND rd.source = ${source}`;
-    } else if (sourceId) {
+    } else if (hasSourceIds) {
       rows = await sql`SELECT rd.source, rd.data, rd.fetched_at FROM raw_data rd
         JOIN pages p ON p.id = rd.page_id
-        WHERE p.slug = ${slug} AND p.source_id = ${sourceId}`;
+        WHERE p.slug = ${slug} AND p.source_id = ANY(${sourceIds}::text[])`;
+    } else if (effectiveSourceId) {
+      rows = await sql`SELECT rd.source, rd.data, rd.fetched_at FROM raw_data rd
+        JOIN pages p ON p.id = rd.page_id
+        WHERE p.slug = ${slug} AND p.source_id = ${effectiveSourceId}`;
     } else {
       rows = await sql`SELECT rd.source, rd.data, rd.fetched_at FROM raw_data rd
         JOIN pages p ON p.id = rd.page_id
@@ -4625,14 +4655,26 @@ export class PostgresEngine implements BrainEngine {
     return rows[0] as unknown as PageVersion;
   }
 
-  async getVersions(slug: string, opts?: { sourceId?: string }): Promise<PageVersion[]> {
+  async getVersions(slug: string, opts?: { sourceId?: string; sourceIds?: string[] }): Promise<PageVersion[]> {
     const sql = this.sql;
     // v0.31.8 (D16): two-branch.
-    if (opts?.sourceId) {
+    // v0.42+ (federated read scope): sourceIds[] wins over sourceId.
+    const sourceIds = opts?.sourceIds;
+    const sourceId = opts?.sourceId;
+    if (sourceIds && sourceIds.length > 0) {
       const rows = await sql`
         SELECT pv.* FROM page_versions pv
         JOIN pages p ON p.id = pv.page_id
-        WHERE p.slug = ${slug} AND p.source_id = ${opts.sourceId}
+        WHERE p.slug = ${slug} AND p.source_id = ANY(${sourceIds}::text[])
+        ORDER BY pv.snapshot_at DESC
+      `;
+      return rows as unknown as PageVersion[];
+    }
+    if (sourceId) {
+      const rows = await sql`
+        SELECT pv.* FROM page_versions pv
+        JOIN pages p ON p.id = pv.page_id
+        WHERE p.slug = ${slug} AND p.source_id = ${sourceId}
         ORDER BY pv.snapshot_at DESC
       `;
       return rows as unknown as PageVersion[];
