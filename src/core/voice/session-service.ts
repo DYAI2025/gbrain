@@ -3,7 +3,7 @@ import type { TTSAdapter } from './tts.ts';
 
 export function buildVoiceSessionPageInput(
   session: VoiceSessionPage,
-  opts?: { tags?: string[]; provenance?: Record<string, unknown> },
+  provenance?: Record<string, unknown>,
 ): Record<string, unknown> {
   return {
     title: session.slug,
@@ -12,10 +12,27 @@ export function buildVoiceSessionPageInput(
     frontmatter: {
       type: 'voice_session',
       source: 'voice',
+      confidence: 0.6,
+      consent: false,
       session_id: session.slug,
-      ...opts?.provenance,
+      ...provenance,
     },
   };
+}
+
+export async function persistVoiceSession(
+  engine: { putPage(slug: string, data: Record<string, unknown>): Promise<void>; addTag(slug: string, tag: string): Promise<void> },
+  session: VoiceSessionPage,
+  extraTags?: string[],
+): Promise<void> {
+  const input = buildVoiceSessionPageInput(session);
+  await engine.putPage(session.slug, input);
+  await engine.addTag(session.slug, 'voice');
+  if (extraTags) {
+    for (const tag of extraTags) {
+      await engine.addTag(session.slug, tag);
+    }
+  }
 }
 
 export class SessionError extends Error {

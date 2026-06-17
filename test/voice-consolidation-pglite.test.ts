@@ -143,15 +143,12 @@ describe('consolidateVoiceSession integration (PGLite)', () => {
   });
 
   test('voice process page persist+consolidate end-to-end', async () => {
-    const { VoiceSessionService } = await import('../src/core/voice/session-service.ts');
-    const { buildVoiceSessionPageInput } = await import('../src/core/voice/session-service.ts');
+    const { VoiceSessionService, persistVoiceSession } = await import('../src/core/voice/session-service.ts');
     const { MockSTTAdapter } = await import('../src/core/voice/stt.ts');
     const { MockTTSAdapter } = await import('../src/core/voice/tts.ts');
 
     const onSave = async (session: { slug: string; content: string }) => {
-      const pageInput = buildVoiceSessionPageInput(session);
-      await engine.putPage(session.slug, pageInput);
-      await engine.addTag(session.slug, 'voice');
+      await persistVoiceSession(engine, session);
     };
 
     const service = new VoiceSessionService({
@@ -172,6 +169,8 @@ describe('consolidateVoiceSession integration (PGLite)', () => {
     const page = await engine.getPage(result.sessionId);
     expect(page).not.toBeNull();
     expect(page!.type).toBe('voice_session');
+    expect(page!.compiled_truth).toBe(result.pageContent);
+    expect(page!.title).toBe(result.sessionId);
 
     const tags = await engine.getTags(result.sessionId);
     expect(tags).toContain('voice');

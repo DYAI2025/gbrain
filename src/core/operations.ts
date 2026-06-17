@@ -5076,13 +5076,12 @@ const voice_process: Operation = {
       : new (await import('./voice/tts.ts')).MockTTSAdapter();
     const buf = Buffer.from(p.audio_base64 as string, 'base64');
 
+    const { persistVoiceSession } = await import('./voice/session-service.ts');
     const service = new VoiceSessionService({
       stt,
       tts,
       onSave: async (session) => {
-        const pageInput = buildVoiceSessionPageInput(session, { tags: ['voice'] });
-        await engine.putPage(session.slug, pageInput);
-        await engine.addTag(session.slug, 'voice');
+        await persistVoiceSession(engine, session);
       },
     });
     const audio = { buffer: new Uint8Array(buf).buffer as ArrayBuffer, mimeType: 'audio/webm' };
