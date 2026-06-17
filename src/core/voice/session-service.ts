@@ -42,6 +42,16 @@ export class SessionError extends Error {
   }
 }
 
+export interface ContextProviderResult {
+  answer: string;
+  citations?: unknown[];
+}
+
+export type ContextProvider = (
+  transcript: string,
+  context?: { title?: string; tags?: string[] },
+) => Promise<ContextProviderResult>;
+
 export interface VoiceSessionResult {
   sessionId: string;
   transcript: string;
@@ -71,15 +81,18 @@ export class VoiceSessionService {
   private stt: STTAdapter;
   private tts: TTSAdapter;
   private onSave?: (session: VoiceSessionPage) => Promise<void>;
+  private contextProvider?: ContextProvider;
 
   constructor(opts: {
     stt: STTAdapter;
     tts: TTSAdapter;
     onSave?: (session: VoiceSessionPage) => Promise<void>;
+    contextProvider?: ContextProvider;
   }) {
     this.stt = opts.stt;
     this.tts = opts.tts;
     this.onSave = opts.onSave;
+    this.contextProvider = opts.contextProvider;
   }
 
   async processAudio(
@@ -102,7 +115,17 @@ export class VoiceSessionService {
     const transcript = transcriptionResult.text;
     const summary = generateSummary(transcript);
 
-    const answer = `I processed your input about: ${transcript.slice(0, 100)}`;
+    let answer: string;
+    if (this.contextProvider) {
+      try {
+        const result = await this.contextProvider(transcript, context);
+        answer = result.answer;
+      } catch {
+        answer = summary;
+      }
+    } else {
+      answer = summary;
+    }
 
     let audioOutput: ArrayBuffer;
     try {
@@ -115,6 +138,7 @@ export class VoiceSessionService {
       title: context?.title ?? 'Voice Session',
       transcript,
       summary,
+      answer,
       tags,
       slug,
     });
@@ -126,7 +150,7 @@ export class VoiceSessionService {
     return {
       sessionId,
       transcript,
-      summary,
+      summary: answer,
       tags,
       audioOutput,
       pageContent,
@@ -138,11 +162,16 @@ function buildPageContent(opts: {
   title: string;
   transcript: string;
   summary: string;
+  answer?: string;
   tags: string[];
   slug: string;
 }): string {
   const tagsYaml = opts.tags.length > 0
     ? `\ntags: [${opts.tags.map(t => `"${t}"`).join(', ')}]`
+    : '';
+
+  const answerSection = opts.answer && opts.answer !== opts.summary
+    ? `\n\n## Answer\n\n${opts.answer}`
     : '';
 
   return [
@@ -163,6 +192,6 @@ function buildPageContent(opts: {
     '## Summary',
     '',
     opts.summary,
-    '',
+    answerSection,
   ].join('\n');
 }
