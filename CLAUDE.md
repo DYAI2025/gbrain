@@ -115,6 +115,24 @@ stays small enough to load every session. Nothing was lost — the pre-move cont
 is in git, and the docs carry every load-bearing invariant (compressed to
 current-state).
 
+## Commands (first-hop cheat-sheet)
+
+Runtime is **Bun** (`bun test` is the native runner — there is no Jest/Vitest).
+Full test-tier table + isolation rules live in `docs/TESTING.md`; this is just the
+first hop.
+
+| Do this | Run |
+|---|---|
+| Run the CLI in dev | `bun run dev -- <args>` (or `bun src/cli.ts <args>`) |
+| Compile the binary | `bun run build` → `bin/gbrain` |
+| Fast unit loop (no DB, no typecheck) | `bun run test` |
+| **One test file** | `bun test test/foo.test.ts` — redirect to a file, NEVER pipe to `tail` (see the iron rule below) |
+| Typecheck only | `bun run typecheck` |
+| Pre-push gate (this repo's "lint") | `bun run verify` — ~30 `check:*` guards + `tsc`. **There is no `lint`/`format` script**; `verify` is the source-quality gate. |
+| Everything CI runs, in Docker | `bun run ci:local` (needs Docker + `gitleaks`); `bun run ci:local:diff` for the diff-aware subset |
+| Real-Postgres E2E | `bun run test:e2e` (needs `DATABASE_URL`) |
+| After ANY CLAUDE.md / reference-doc edit | `bun run build:llms` (CI fails otherwise — see below) |
+
 ## Maintaining CLAUDE.md and the reference docs
 
 CLAUDE.md grew to ~592KB / ~147k tokens once the per-file index became append-only
