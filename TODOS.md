@@ -1,5 +1,32 @@
 # TODOS
 
+## put_page write-audit record (filed 2026-06-21, from gbrain-atlas-context intake F-002)
+
+- [ ] **P2 — Emit a consolidated write-audit record for `put_page` (and the `ctx.dryRun` write class).**
+  **What:** On a completed write, produce a single inspectable audit record carrying
+  `source`, `slug`, `timestamp`, and `operation result` together — queryable via a CLI
+  surface (e.g. `gbrain audit <slug>` or an `--audit` view), not scattered across the
+  `put` return value, `list`, and the query scope.
+  **Why:** The controlled-write requirement (REQ-003 / AC-009) of the gbrain-atlas-context
+  intake demands auditable writes. A real-write test (2026-06-21) showed the four fields
+  exist only scattered: `slug`+`status` in the `put` result, `timestamp`+`slug` via `list`,
+  `source` only implicitly via query scope. `history <slug>` is empty for a fresh put, there
+  is no audit/provenance op, and `~/.gbrain/audit/` holds only budget/dream/backpressure logs
+  — no page-write audit. So AC-009 is currently NOT satisfiable.
+  **Context:** For a DB-only source (no `local_path`, e.g. `gbrain-atlas-context`) the
+  provenance write-through is skipped entirely (`write_through.skipped:
+  source_repo_belongs_to_other_source`), so even the existing provenance path captures
+  nothing for this class of source. Relates to Roadmap Phase 6 "Controlled Write Workflows"
+  (validated + audited writes into own sources) in `docs/traceability.md`.
+  **Trigger:** building the gbrain-atlas-context MVP write path, or any requirement that
+  writes must be auditable for a DB-only source.
+  **Start:** decide the audit sink (append-only JSONL under `~/.gbrain/audit/` vs a DB
+  table) and emit from the `put_page` handler in `src/core/operations.ts` after a
+  successful write, stamping `{source_id, slug, ts, result, op}`; add a read surface +
+  engine-parity + a dry-run-skips-audit test. See finding `F-002` in
+  `docs/traceability.md` and the ledger entry in
+  `docs/prd/gbrain-atlas-context-system.intake.json`.
+
 ## gbrain#2200 federated-read follow-ups (filed v0.42.46.0)
 
 - [x] **P1 — Close the federated-read scope on the remaining same-class by-slug read ops.**
