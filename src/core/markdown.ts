@@ -12,12 +12,17 @@ export type ParseValidationCode =
   | 'NULL_BYTES'
   | 'NESTED_QUOTES'
   | 'NON_STRING_FIELD'
-  | 'EMPTY_FRONTMATTER';
+  | 'EMPTY_FRONTMATTER'
+  // Goldstandard mode (T-101, REQ-002): required-field + relations-shape checks.
+  | 'MISSING_REQUIRED_FIELD'
+  | 'INVALID_RELATIONS_SHAPE';
 
 export interface ParseValidationError {
   code: ParseValidationCode;
   message: string;
   line?: number;
+  /** The frontmatter field the error concerns (goldstandard checks). */
+  field?: string;
 }
 
 export interface ParseOpts {
@@ -26,6 +31,14 @@ export interface ParseOpts {
   /** When validate is true and frontmatter has a `slug:` field that doesn't
    *  match expectedSlug, emits SLUG_MISMATCH. */
   expectedSlug?: string;
+  /**
+   * T-101 (REQ-002): Goldstandard required-field validation. When true, asserts
+   * non-empty `slug`/`title`/`type` in frontmatter (MISSING_REQUIRED_FIELD) and
+   * that `relations` is an array when present (INVALID_RELATIONS_SHAPE). Independent
+   * of `validate`: `errors[]` is populated when either flag is set. Opt-in and
+   * source-scoped at the write layer — NOT a global default.
+   */
+  goldstandard?: boolean;
   /**
    * v0.39 T1.5 — active schema pack to drive type inference. When set,
    * `inferType` uses the pack's `page_types[].path_prefixes` instead of
@@ -130,6 +143,12 @@ export function parseMarkdown(
     });
   }
 
+  // T-101 (REQ-002): Goldstandard required-field validation. Independent of
+  // `validate` so a goldstandard-only caller still gets errors[].
+  if (opts?.goldstandard) {
+    collectGoldstandardErrors((parsed?.data ?? {}) as Record<string, unknown>, errors);
+  }
+
   // When YAML parsing failed (rare; gray-matter is forgiving), fall back to
   // empty frontmatter + raw content as the body so non-validate callers still
   // get a usable shape.
@@ -224,8 +243,39 @@ export function parseMarkdown(
     consent,
     warnings,
   };
-  if (opts?.validate) result.errors = errors;
+  if (opts?.validate || opts?.goldstandard) result.errors = errors;
   return result;
+}
+
+/**
+ * T-101 (REQ-002) Goldstandard required-field validation. Required (non-empty):
+ * `slug`, `title`, `type`. `relations` is OPTIONAL but, when present, must be an
+ * array (a brand-new/standalone page legitimately has no relations — REQ-004
+ * verified: the first page links to nothing). Mutates `errors` in place.
+ */
+function collectGoldstandardErrors(
+  frontmatter: Record<string, unknown>,
+  errors: ParseValidationError[],
+): void {
+  for (const field of ['slug', 'title', 'type'] as const) {
+    const v = frontmatter[field];
+    const missing = v === undefined || v === null || (typeof v === 'string' && v.trim() === '');
+    if (missing) {
+      errors.push({
+        code: 'MISSING_REQUIRED_FIELD',
+        field,
+        message: `Goldstandard requires a non-empty '${field}' frontmatter field.`,
+      });
+    }
+  }
+  const rel = frontmatter.relations;
+  if (rel !== undefined && rel !== null && !Array.isArray(rel)) {
+    errors.push({
+      code: 'INVALID_RELATIONS_SHAPE',
+      field: 'relations',
+      message: `Goldstandard 'relations' must be an array when present, got ${typeof rel}.`,
+    });
+  }
 }
 
 /**
