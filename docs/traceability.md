@@ -14,7 +14,7 @@ Feature Slug: `gbrain-atlas-context-system`
 | Trace ID | Requirement | Vision Link | Canvas Link | Acceptance Criteria | Evidence Needed | Source Type | Status |
 |---|---|---|---|---|---|---|---|
 | `TRC-001` | `REQ-001` Markdown Input Intake | `VIS-006` | `CAN-007`, `CAN-014` | `AC-001`–`AC-003` | **VERIFIED** (Evidence-Sweep 2026-06-21): Ingest non-destruktiv via `parseMarkdown`/`import-file`. `AC-003` Goldstandard-Kandidat hängt an REQ-002 (PARTIAL). | `EXPLICIT` | `linked` |
-| `TRC-002` | `REQ-002` Goldstandard Validation | `VIS-004`, `VIS-006` | `CAN-006`, `CAN-009` | `AC-004`–`AC-006` | **PARTIAL** (Evidence-Sweep): generischer Frontmatter-Validator existiert + verifiziert (`gbrain frontmatter validate`, 8 Codes, strukturierte Fehler), aber KEIN Required-Field-Check (slug/title/type/relations) und NICHT vor dem Write verdrahtet → Goldstandard-Gate unbuilt (`T-101`). | `ASSUMPTION` | `missing-evidence` |
+| `TRC-002` | `REQ-002` Goldstandard Validation | `VIS-004`, `VIS-006` | `CAN-006`, `CAN-009` | `AC-004`–`AC-006` | **VERIFIED** (`T-101`, branch `feature/t-101-goldstandard-gate`, noch nicht gemerged): source-scoped Goldstandard-Gate gebaut — eine `goldstandard:true`-Source erzwingt slug/title/type vor dem Write, blockt invalide Metadaten (AC-006) mit strukturierten Fehlern (AC-005, AC-004); `relations` optional-aber-shape-geprüft. TDD (13 Fälle) + end-to-end CLI-verifiziert. | `EXPLICIT` | `linked` |
 | `TRC-003` | `REQ-003` Controlled Write | `VIS-009` | `CAN-010` | `AC-007`–`AC-009` | `AC-007` **verifiziert** (Isolation: Write in `gbrain-atlas-context` nicht in `default`/Cross-Source sichtbar). `AC-008` **verifiziert** (`F-001`). `AC-009` **NICHT erfüllt** → `F-002` (kein konsolidierter Audit-Record). | `EXPLICIT` | `missing-evidence` |
 | `TRC-004` | `REQ-004` Semantic/Ontological Linking | `VIS-004`, `VIS-005` | `CAN-006`, `CAN-013` | `AC-010`–`AC-012` | **VERIFIED (live)** (Evidence-Sweep): typisierte Kanten + Provenance live reproduziert — 2. Page → `created:1`, `invested_in` aus Verb inferiert, `works_at` aus Frontmatter mit `origin_field`; Relational-Query löst korrekt auf. `created:0` der 1. Page = erwartetes Verhalten, kein Defekt. | `ASSUMPTION` | `linked` |
 | `TRC-005` | `REQ-005` Gap Visibility | `VIS-004`, `VIS-008` | `CAN-009`, `CAN-011` | `AC-013`–`AC-015` | **PARTIAL** (Evidence-Sweep, nur Code): `GAP-C1` (Orphans/Backlink-Gap) bedient, `GAP-C4` teilweise; **`GAP-C2` (Kante ohne Provenance) + `GAP-C3` (Konfidenz<Schwelle) fehlen** (Kanten haben keine Confidence-Spalte). 1/4 Kriterien solide (`T-103`). | `EXPLICIT` | `missing-evidence` |
@@ -36,8 +36,8 @@ Feature Slug: `gbrain-atlas-context-system`
 - Canvas-Linkage: vollständig (jedes REQ ≥1 `CAN-*`).
 - Acceptance-Criteria-Linkage: vollständig (`AC-001`…`AC-024`, je REQ 3 AC).
 - Evidence-Linkage (Stand nach Evidence-Sweep 2026-06-21):
-  - **VERIFIED**: `REQ-001` Ingest, `REQ-004` Linking (live), `REQ-006` MCP-HTTP-Smoke (live). `REQ-003`: `AC-007`+`AC-008` verifiziert.
-  - **PARTIAL**: `REQ-002` (Validator ja, Goldstandard-Gate nein), `REQ-005` (GAP-C1 ja, C2/C3 fehlen), `REQ-007` (Atlas rendert, aber kein gbrain-Export → invertiert).
+  - **VERIFIED**: `REQ-001` Ingest, `REQ-002` Goldstandard-Gate (`T-101`, branch — gebaut+getestet), `REQ-004` Linking (live), `REQ-006` MCP-HTTP-Smoke (live). `REQ-003`: `AC-007`+`AC-008` verifiziert.
+  - **PARTIAL**: `REQ-005` (GAP-C1 ja, C2/C3 fehlen — `T-103`), `REQ-007` (Atlas rendert, aber kein gbrain-Export → invertiert — `T-102`).
   - **GAP/offen**: `REQ-003`/`AC-009` (`F-002` Audit-Record), `REQ-008` deferred, und die o.g. PARTIAL-Restlücken (`T-101`…`T-104`).
   - Keine `EV-*`-Artefakte als formale Belegobjekte; die Sweep-Verdikte ersetzen sie für die geprüften REQ. Der Nutzer hat Planning trotz Restlücken bestätigt (OQ-005); offene Punkte bleiben dokumentierte Planning-Inputs.
 

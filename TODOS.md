@@ -7,7 +7,12 @@ Most MVP machinery exists + works (REQ-001 ingest, REQ-004 linking, REQ-006 MCP-
 verified live); the remaining work is integration + these real gaps. See finding `F-003` and the
 per-row verdicts in `docs/traceability.md`.
 
-- [ ] **`T-101` P2 — Goldstandard required-field validator, wired BEFORE write (REQ-002).**
+- [x] **`T-101` P2 — Goldstandard required-field validator, wired BEFORE write (REQ-002).** DONE
+  (branch `feature/t-101-goldstandard-gate`, not yet merged): opt-in source policy
+  `goldstandard:true` gates `put_page` on required frontmatter slug/title/type (relations
+  optional-but-shape-checked), throwing `goldstandard_validation_failed` before persist and
+  before the dry-run return. `parseMarkdown` goldstandard mode + `isSourceGoldstandard` +
+  `sources add --goldstandard`. TDD 13 cases + end-to-end CLI-verified; `bun run verify` 30/30.
   **What:** A pre-write validator that asserts presence of the Goldstandard required frontmatter
   fields (`slug`, `title`, `type`, `relations`) and returns structured errors, gating the write
   (AC-006: invalid metadata blocks persist).
