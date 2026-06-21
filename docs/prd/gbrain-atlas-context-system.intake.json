@@ -2,7 +2,7 @@
   "feature_slug": "gbrain-atlas-context-system",
   "language": "de",
   "mode": "PLUMBLINE_READY_PACKAGE",
-  "readiness_level": "READY_FOR_USER_CONFIRMATION",
+  "readiness_level": "READY_FOR_AGILETEAM_PLANNING",
   "source_map": [
     { "source_id": "SRC-001", "source_kind": "product-vision-md", "summary": "Product Vision GBrain Atlas Context System (VIS-001..011)." },
     { "source_id": "SRC-002", "source_kind": "product-canvas-md", "summary": "Product Canvas GBrain Atlas Context System (CAN-001..014)." },
@@ -89,16 +89,16 @@
     { "id": "OQ-002", "field": "evidence_needed.all_requirements", "source_type": "MISSING", "severity": "warning", "reason": "Keine Evidence-Artefakte (EV-###) definiert; alle TRC-Zeilen stehen auf 'missing-evidence'. Verhindert READY_FOR_AGILETEAM_PLANNING.", "source_ref": "SRC-004" },
     { "id": "OQ-003", "field": "traceability_source_format", "source_type": "MISSING", "severity": "info", "reason": "Quell-Traceability (SRC-004) hat zerstoerte Tabellen-Spaltentrenner; Inhalte rekonstruiert, Evidence/Source-Type-Spalten ergaenzt.", "source_ref": "SRC-004" },
     { "id": "OQ-004", "field": "gap_relation_criteria", "source_type": "EXPLICIT", "severity": "info", "reason": "RESOLVED: Gap-Kriterien GAP-C1..GAP-C4 (Knoten ohne typisierte Kante, Kante ohne Provenance, Konfidenz < 0.5, verwaiste Pflicht-Relation) in REQ-005 definiert.", "source_ref": "OQ-004" },
-    { "id": "OQ-005", "field": "user_confirmation", "source_type": "MISSING", "severity": "info", "reason": "Nutzerbestaetigung im aktuellen Kontext nicht erteilt; Readiness bleibt READY_FOR_USER_CONFIRMATION.", "source_ref": "SRC-001" },
+    { "id": "OQ-005", "field": "user_confirmation", "source_type": "EXPLICIT", "severity": "info", "reason": "RESOLVED: Nutzer hat im aktuellen Kontext explizit bestaetigt (2026-06-21); Readiness -> READY_FOR_AGILETEAM_PLANNING. F-002 (AC-009 gap) + OQ-002 (deferred evidence) bleiben als bekannte Planning-Inputs offen.", "source_ref": "SRC-001" },
     { "id": "F-001", "field": "REQ-003.AC-008.dry_run", "source_type": "EXPLICIT", "severity": "info", "reason": "RESOLVED (test-evidence): 'gbrain put --dry-run' schrieb real (AC-008-Verletzung). Root cause: parseOpArgs verwarf den globalen --dry-run-Flag, weil put_page (und ~16 ctx.dryRun-Ops) keinen dry_run-Param deklarieren; ctx.dryRun blieb false. Fix in src/cli.ts (dry_run als globaler Boolean) + test/cli-args.test.ts. Verifiziert: Dry-run liefert {dry_run:true}, kein Write.", "source_ref": "REQ-003" },
     { "id": "AC-007-EV", "field": "REQ-003.AC-007.source_isolation", "source_type": "EXPLICIT", "severity": "info", "reason": "VERIFIED (test-evidence): Realer Write von atlas-isolation-probe in gbrain-atlas-context ist dort abrufbar, aber page_not_found in --source default und in der Cross-Source-Standardsuche (isoliert/non-federated). Probe danach soft-deleted.", "source_ref": "REQ-003" },
     { "id": "F-002", "field": "REQ-003.AC-009.write_audit", "source_type": "MISSING", "severity": "warning", "reason": "GAP (test-evidence): AC-009 (Audit-Record mit source+slug+timestamp+result) ist nicht erfuellbar — Felder existieren nur verstreut (put-result, list), kein konsolidierter Audit-Record; history leer; kein audit-op; write_through uebersprungen (DB-only source ohne local_path). Feature-Bedarf, nicht durch Test schliessbar.", "source_ref": "REQ-003" }
   ],
   "user_confirmation": {
     "required": true,
-    "status": "pending-user-confirmation",
+    "status": "user-confirmed",
     "confirmation_phrase": "Ich bestaetige, dass Product Canvas und Product Vision meine Absicht korrekt wiedergeben und als Grundlage fuer AgileTeam Planning verwendet werden duerfen.",
-    "confirmed_by_user": false,
-    "source_ref": "SRC-001"
+    "confirmed_by_user": true,
+    "source_ref": "user-confirmed-in-session 2026-06-21"
   }
 }

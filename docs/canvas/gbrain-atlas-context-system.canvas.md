@@ -1,6 +1,6 @@
 # Product Canvas: GBrain Atlas Context System
 
-Status: `READY_FOR_USER_CONFIRMATION`
+Status: `READY_FOR_AGILETEAM_PLANNING`
 Feature Slug: `gbrain-atlas-context-system`
 
 ## CAN-001 — Product Name

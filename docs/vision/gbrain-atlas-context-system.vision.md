@@ -1,6 +1,6 @@
 # Product Vision: GBrain Atlas Context System
 
-Status: `READY_FOR_USER_CONFIRMATION`
+Status: `READY_FOR_AGILETEAM_PLANNING`
 Feature Slug: `gbrain-atlas-context-system`
 
 ## VIS-001 — Vision Statement

@@ -1,6 +1,6 @@
 # Traceability Matrix: GBrain Atlas Context System
 
-Status: `READY_FOR_USER_CONFIRMATION`
+Status: `READY_FOR_AGILETEAM_PLANNING`
 Feature Slug: `gbrain-atlas-context-system`
 
 > Reconstructed from a format-corrupted source (`SRC-004`): the original table had
@@ -29,14 +29,14 @@ Feature Slug: `gbrain-atlas-context-system`
 - Vision-Linkage: vollständig (jedes REQ ≥1 `VIS-*`).
 - Canvas-Linkage: vollständig (jedes REQ ≥1 `CAN-*`).
 - Acceptance-Criteria-Linkage: vollständig (`AC-001`…`AC-024`, je REQ 3 AC).
-- Evidence-Linkage: **offen (deferred, OQ-002)** — keine `EV-*`-Artefakte; Evidence-Bedarfe pro REQ sind formuliert, werden aber erst beim Bauen/Testen des MVP erbracht. Alle Zeilen `missing-evidence`. Blockiert `READY_FOR_AGILETEAM_PLANNING`, nicht die strukturelle Traceability.
+- Evidence-Linkage: **offen (deferred, OQ-002)** — keine `EV-*`-Artefakte; Evidence-Bedarfe pro REQ sind formuliert, werden aber erst beim Bauen/Testen des MVP erbracht. Alle Zeilen `missing-evidence`. Der Nutzer hat Planning trotz deferred Evidence ausdrücklich bestätigt (OQ-005); Evidence + `F-002` bleiben dokumentierte offene Planning-Inputs, kein struktureller Traceability-Block.
 
 ## Aufgelöste offene Punkte
 
 - `OQ-001` (Write-Ziel-Source): **aufgelöst** → `gbrain-atlas-context` (REQ-003 / NFR-003 / CAN-010).
 - `OQ-004` (Gap-Kriterien): **aufgelöst** → `GAP-C1` Knoten ohne typisierte Kante, `GAP-C2` Kante ohne Provenance, `GAP-C3` Konfidenz < Cutoff (default 0.5), `GAP-C4` verwaiste Pflicht-Relation (REQ-005).
 - `OQ-002` (Evidence): **deferred** — Soll-Belege formuliert, Erbringung beim MVP-Bau.
-- `OQ-005` (User-Confirmation): offen — Bestätigungssatz noch nicht erteilt.
+- `OQ-005` (User-Confirmation): **aufgelöst** → Nutzer hat am 2026-06-21 im Kontext explizit bestätigt; Readiness → `READY_FOR_AGILETEAM_PLANNING`. `F-002` (AC-009-Gap) + `OQ-002` (deferred Evidence) bleiben dokumentierte offene Planning-Inputs.
 
 ## Findings (Test-Evidenz)
 
