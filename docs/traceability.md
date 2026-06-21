@@ -15,7 +15,7 @@ Feature Slug: `gbrain-atlas-context-system`
 |---|---|---|---|---|---|---|---|
 | `TRC-001` | `REQ-001` Markdown Input Intake | `VIS-006` | `CAN-007`, `CAN-014` | `AC-001`–`AC-003` | Ingest-Lauflog auf Sample-Markdown (non-destruktiver Parse + Goldstandard-Kandidat) | `EXPLICIT` | `missing-evidence` |
 | `TRC-002` | `REQ-002` Goldstandard Validation | `VIS-004`, `VIS-006` | `CAN-006`, `CAN-009` | `AC-004`–`AC-006` | Validierungsreport auf valide + invalide Fixtures (strukturierte Fehler) | `ASSUMPTION` | `missing-evidence` |
-| `TRC-003` | `REQ-003` Controlled Write | `VIS-009` | `CAN-010` | `AC-007`–`AC-009` | `AC-008` **verifiziert** (Dry-run-Smoke nach Fix `F-001` → `{dry_run:true}`, kein Write). `AC-007` Source-Isolation + `AC-009` Audit-Log noch offen. | `EXPLICIT` | `missing-evidence` |
+| `TRC-003` | `REQ-003` Controlled Write | `VIS-009` | `CAN-010` | `AC-007`–`AC-009` | `AC-007` **verifiziert** (Isolation: Write in `gbrain-atlas-context` nicht in `default`/Cross-Source sichtbar). `AC-008` **verifiziert** (`F-001`). `AC-009` **NICHT erfüllt** → `F-002` (kein konsolidierter Audit-Record). | `EXPLICIT` | `missing-evidence` |
 | `TRC-004` | `REQ-004` Semantic/Ontological Linking | `VIS-004`, `VIS-005` | `CAN-006`, `CAN-013` | `AC-010`–`AC-012` | Node/Edge-Set mit Relationstyp + Provenance-Markern | `ASSUMPTION` | `missing-evidence` |
 | `TRC-005` | `REQ-005` Gap Visibility | `VIS-004`, `VIS-008` | `CAN-009`, `CAN-011` | `AC-013`–`AC-015` | Gap-Detection-Output mit ≥1 Gap nach Kriterien `GAP-C1`…`GAP-C4` (OQ-004) + Atlas-Gap-Indikator | `EXPLICIT` | `missing-evidence` |
 | `TRC-006` | `REQ-006` MCP HTTP Smoke | `VIS-007` | `CAN-011` | `AC-016`–`AC-018` | Reproduzierbares MCP-HTTP-Smoke-Transkript mit Pass/Fail-Log | `EXPLICIT` | `missing-evidence` |
@@ -49,6 +49,19 @@ Feature Slug: `gbrain-atlas-context-system`
 - **Test:** `test/cli-args.test.ts` — 2 neue Fälle (RED→GREEN), inkl. Footgun-Regression (kein Token-Swallow).
 - **Verifikation:** Nach Fix liefert der Dry-run `{ "dry_run": true, "action": "put_page", "slug": … }`; `get` auf den Slug → `page_not_found` (nichts geschrieben). `AC-008` damit lokal **verifiziert**. `AC-007` (Write nur in konfigurierte Source) und `AC-009` (Audit-Log Source/Slug/Timestamp/Result) bleiben offen.
 - **Status:** Code-Fix lokal verifiziert; Commit/Push separat. Kein `/ship` ohne Freigabe.
+
+### `F-002` — `AC-009` (Write-Audit) ist nicht erfüllt: kein konsolidierter Audit-Record
+
+- **Betrifft:** `REQ-003` / `AC-009` ("audit data is inspected → source, slug, timestamp, operation result visible").
+- **Test (2026-06-21):** Realer Write von `atlas-isolation-probe` in `gbrain-atlas-context`, danach Audit-Surface inspiziert.
+- **Befund:** Die vier geforderten Felder existieren nur **verstreut**, nicht als inspizierbarer Audit-Record:
+  - `slug` + `status`/`result` → im `put`-Rückgabewert (`{slug, status:"created_or_updated"}`).
+  - `timestamp` (Datum) + `slug` → via `gbrain list --source …`.
+  - `source` → nur **implizit** über den Query-Scope; der Write-Result nennt die Ziel-Source nicht.
+  - `gbrain history <slug>` → leer ("No versions"); kein Audit-/Provenance-CLI-Op; `~/.gbrain/audit/` enthält nur Budget-/Dream-/Backpressure-Logs, keinen Page-Write-Audit.
+  - `write_through` wurde **übersprungen** (`skipped: source_repo_belongs_to_other_source`) — eine DB-only Source ohne `local_path` hat keinen Provenance-Schreibpfad.
+- **Schluss:** `AC-009` ist mit der aktuellen Plattform **nicht erfüllbar**, ohne dass GBrain einen Put-Level-Audit-Record (source+slug+timestamp+result an einer Stelle) emittiert. Echter Gap, kein bloßes `missing-evidence`.
+- **Status:** offen — Feature-Bedarf (Audit-Record für `put_page`), nicht durch Test schließbar. `AC-007` + `AC-008` dagegen verifiziert.
 
 ## Roadmap-Ableitung (aus SRC-004, informativ)
 
