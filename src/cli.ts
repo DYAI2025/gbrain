@@ -742,6 +742,15 @@ export function parseOpArgs(op: Operation, args: string[]): Record<string, unkno
         }
       }
       const key = arg.slice(2).replace(/-/g, '_');
+      // `dry_run` is a GLOBAL context flag (makeContext reads params.dry_run into
+      // ctx.dryRun), honored by ~16 mutating ops but declared as a param by none.
+      // Recognize it as a boolean here regardless of op declaration, otherwise the
+      // generic branch below silently drops it — making `put <slug> --dry-run`
+      // execute a REAL write — or swallows the following token as its value.
+      if (key === 'dry_run') {
+        params.dry_run = true;
+        continue;
+      }
       const paramDef = op.params[key];
       if (paramDef?.type === 'boolean') {
         params[key] = true;
