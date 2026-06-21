@@ -1,0 +1,101 @@
+{
+  "feature_slug": "gbrain-atlas-context-system",
+  "language": "de",
+  "mode": "PLUMBLINE_READY_PACKAGE",
+  "readiness_level": "READY_FOR_USER_CONFIRMATION",
+  "source_map": [
+    { "source_id": "SRC-001", "source_kind": "product-vision-md", "summary": "Product Vision GBrain Atlas Context System (VIS-001..011)." },
+    { "source_id": "SRC-002", "source_kind": "product-canvas-md", "summary": "Product Canvas GBrain Atlas Context System (CAN-001..014)." },
+    { "source_id": "SRC-003", "source_kind": "prd-md", "summary": "PRD GBrain Atlas Context System (REQ-001..008, AC-001..024, NFR-001..005, RISK-001..006)." },
+    { "source_id": "SRC-004", "source_kind": "traceability-md", "summary": "Traceability summary TRC-001..008 + roadmap derivation (format-corrupted in source, reconstructed)." }
+  ],
+  "artifacts": {
+    "vision": {
+      "product_vision_statement": { "value": "Lokal deploybares GBrain-System, das beliebige Daten in ueberpruefbaren Goldstandard-Markdown ueberfuehrt, semantisch/ontologisch verknuepft und ueber MCP als verlaesslichen Agentenkontext bereitstellt; Atlas als 3D-Graph-/Review-Oberflaeche.", "source_type": "EXPLICIT", "source_ref": "SRC-001:VIS-001" },
+      "target_group": { "value": "Systemarchitekt / Power-User; initial Ben als Builder und erster Operator; spaeter berechtigte Mitarbeitende an einem GBrain-System.", "source_type": "EXPLICIT", "source_ref": "SRC-001:VIS-002" },
+      "product_value": { "value": "Heterogene Daten werden zu einheitlichem Goldstandard-Markdown, im GBrain semantisch/ontologisch verknuepft, Luecken werden sichtbar, Kontext wird ueber MCP fuer Agenten nutzbar.", "source_type": "EXPLICIT", "source_ref": "SRC-001:VIS-004" },
+      "success_signals": [
+        { "value": "MCP HTTP Smoke laeuft reproduzierbar lokal.", "source_type": "EXPLICIT", "source_ref": "SRC-001:VIS-007" },
+        { "value": "Ein Markdown-Datensatz wird validiert, in GBrain geschrieben, erzeugt Graphverknuepfungen und macht mindestens eine semantische/ontologische Luecke sichtbar.", "source_type": "ASSUMPTION", "source_ref": "SRC-001:VIS-008" }
+      ]
+    },
+    "canvas": {
+      "problem": { "value": "Wissens-/Projektdaten liegen fragmentiert in heterogenen Formaten vor; ohne Standardisierung, semantische Verknuepfung und MCP-Schnittstelle erhalten Agenten unvollstaendigen, nicht nachvollziehbaren Kontext.", "source_type": "EXPLICIT", "source_ref": "SRC-002:CAN-004" },
+      "users_customers": [
+        { "value": "Systemarchitekt / Power-User (MVP), initial Ben.", "source_type": "EXPLICIT", "source_ref": "SRC-002:CAN-003" }
+      ],
+      "value_promise": { "value": "Verwandelt heterogene Daten in Goldstandard-Markdown, speichert im GBrain, verknuepft semantisch/ontologisch, macht Luecken sichtbar und stellt Kontext ueber MCP bereit; Atlas macht den Wissensraum 3D-sichtbar.", "source_type": "EXPLICIT", "source_ref": "SRC-002:CAN-006" },
+      "success_signal": { "value": "Harter Erfolg: MCP HTTP Smoke reproduzierbar lokal. Produktwert: Markdown validiert, in GBrain gespeichert, verknuepft, erzeugt sichtbare Kontextluecke.", "source_type": "EXPLICIT", "source_ref": "SRC-002:CAN-011" },
+      "allowed_scope": [
+        { "value": "Markdown-Input, Goldstandard-Validierung, Import, semantische/ontologische Verknuepfung, Luecken-Sichtbarkeit, MCP HTTP Smoke, Atlas-kompatibler Graph-Export, kontrollierter Write/Preview in eigene Source.", "source_type": "EXPLICIT", "source_ref": "SRC-002:CAN-009" }
+      ],
+      "write_target_source": { "value": "gbrain-atlas-context", "source_type": "EXPLICIT", "source_ref": "OQ-001" },
+      "gap_criteria": { "value": "GAP-C1 node without typed edge; GAP-C2 edge without provenance; GAP-C3 confidence below cutoff (default 0.5); GAP-C4 orphaned mandatory relation.", "source_type": "EXPLICIT", "source_ref": "OQ-004" }
+    },
+    "prd": {
+      "objective": { "value": "Lokal deploybares GBrain-Kontextsystem: Markdown -> Goldstandard-Validierung -> kontrollierter GBrain-Write -> semantische/ontologische Verknuepfung -> MCP-Exposition -> Atlas-3D-Graph/Gaps.", "source_type": "EXPLICIT", "source_ref": "SRC-003:1" },
+      "requirements": [
+        { "id": "REQ-001", "title": "Markdown Input Intake", "source_type": "EXPLICIT", "source_ref": "SRC-003:REQ-001" },
+        { "id": "REQ-002", "title": "Goldstandard Markdown Validation", "source_type": "ASSUMPTION", "source_ref": "SRC-003:REQ-002" },
+        { "id": "REQ-003", "title": "Controlled Write to GBrain Source", "source_type": "EXPLICIT", "source_ref": "SRC-003:REQ-003" },
+        { "id": "REQ-004", "title": "Semantic/Ontological Linking", "source_type": "ASSUMPTION", "source_ref": "SRC-003:REQ-004" },
+        { "id": "REQ-005", "title": "Gap Visibility", "source_type": "EXPLICIT", "source_ref": "SRC-003:REQ-005" },
+        { "id": "REQ-006", "title": "MCP HTTP Smoke", "source_type": "EXPLICIT", "source_ref": "SRC-003:REQ-006" },
+        { "id": "REQ-007", "title": "Atlas-Compatible Graph Export", "source_type": "ASSUMPTION", "source_ref": "SRC-003:REQ-007" },
+        { "id": "REQ-008", "title": "Future Multi-Format Conversion Skill", "source_type": "ASSUMPTION", "source_ref": "SRC-003:REQ-008" }
+      ],
+      "acceptance_criteria": [
+        { "id": "AC-001", "requirement_id": "REQ-001", "text": "Given a Markdown file, when ingest runs, then the file is parsed without destroying original content." },
+        { "id": "AC-002", "requirement_id": "REQ-001", "text": "Given missing metadata, when validation runs, then missing fields are reported." },
+        { "id": "AC-003", "requirement_id": "REQ-001", "text": "Given valid Markdown, when intake completes, then a normalized Goldstandard candidate is produced." },
+        { "id": "AC-004", "requirement_id": "REQ-002", "text": "Given a Goldstandard candidate, when validation runs, then frontmatter, slug, title, type and relations are checked." },
+        { "id": "AC-005", "requirement_id": "REQ-002", "text": "Given invalid metadata, when validation fails, then structured errors are returned." },
+        { "id": "AC-006", "requirement_id": "REQ-002", "text": "Given valid Markdown, when validation passes, then the artifact is eligible for controlled write." },
+        { "id": "AC-007", "requirement_id": "REQ-003", "text": "Given a valid Goldstandard page, when write is requested, then the page is written only into the configured source." },
+        { "id": "AC-008", "requirement_id": "REQ-003", "text": "Given dry-run mode, when write is requested, then no persistent write occurs and a preview is returned." },
+        { "id": "AC-009", "requirement_id": "REQ-003", "text": "Given a completed write, when audit data is inspected, then source, slug, timestamp and result are visible." },
+        { "id": "AC-010", "requirement_id": "REQ-004", "text": "Given imported pages, when linking runs, then candidate nodes and edges are generated." },
+        { "id": "AC-011", "requirement_id": "REQ-004", "text": "Given a generated relation, when inspected, then relation type and provenance are available or marked unknown." },
+        { "id": "AC-012", "requirement_id": "REQ-004", "text": "Given weak/missing relation evidence, when graph analysis runs, then a gap is surfaced." },
+        { "id": "AC-013", "requirement_id": "REQ-005", "text": "Given imported pages with missing relations, when gap detection runs, then unlinked/weakly-linked nodes are reported." },
+        { "id": "AC-014", "requirement_id": "REQ-005", "text": "Given a graph export, when Atlas renders it, then gap nodes/indicators are visible." },
+        { "id": "AC-015", "requirement_id": "REQ-005", "text": "Given a user inspects a gap, when details are requested, then missing evidence/relation is explained." },
+        { "id": "AC-016", "requirement_id": "REQ-006", "text": "Given a local environment, when GBrain MCP HTTP server starts, then the endpoint is reachable." },
+        { "id": "AC-017", "requirement_id": "REQ-006", "text": "Given an MCP HTTP request, when the smoke test runs, then an MCP-compatible response is returned." },
+        { "id": "AC-018", "requirement_id": "REQ-006", "text": "Given the smoke test completes, when logs are inspected, then pass/fail is clear and reproducible." },
+        { "id": "AC-019", "requirement_id": "REQ-007", "text": "Given a GBrain source, when graph export runs, then nodes and edges are emitted with stable IDs." },
+        { "id": "AC-020", "requirement_id": "REQ-007", "text": "Given exported graph data, when Atlas loads it, then the graph renders without Atlas recreating GBrain semantics." },
+        { "id": "AC-021", "requirement_id": "REQ-007", "text": "Given a graph edge/node, when inspected in Atlas, then provenance or gap status is available." },
+        { "id": "AC-022", "requirement_id": "REQ-008", "text": "Given a non-Markdown file, when the future conversion skill runs, then a Goldstandard Markdown candidate is produced." },
+        { "id": "AC-023", "requirement_id": "REQ-008", "text": "Given a generated candidate, when validation runs, then it follows the same rules as native Markdown." },
+        { "id": "AC-024", "requirement_id": "REQ-008", "text": "Given unsupported content, when conversion fails, then the failure is explicit and no invalid data is written." }
+      ]
+    },
+    "traceability": {
+      "rows": [
+        { "trace_id": "TRC-001", "requirement_id": "REQ-001", "vision_link": ["VIS-006"], "canvas_link": ["CAN-007", "CAN-014"], "acceptance_criteria": ["AC-001", "AC-002", "AC-003"], "evidence_needed": "Ingest run log on a sample Markdown file showing non-destructive parse + Goldstandard candidate.", "status": "missing-evidence", "source_type": "EXPLICIT" },
+        { "trace_id": "TRC-002", "requirement_id": "REQ-002", "vision_link": ["VIS-004", "VIS-006"], "canvas_link": ["CAN-006", "CAN-009"], "acceptance_criteria": ["AC-004", "AC-005", "AC-006"], "evidence_needed": "Validation report on valid + invalid fixtures (structured errors).", "status": "missing-evidence", "source_type": "ASSUMPTION" },
+        { "trace_id": "TRC-003", "requirement_id": "REQ-003", "vision_link": ["VIS-009"], "canvas_link": ["CAN-010"], "acceptance_criteria": ["AC-007", "AC-008", "AC-009"], "evidence_needed": "Dry-run preview + audit-log record (source/slug/timestamp/result).", "status": "missing-evidence", "source_type": "EXPLICIT" },
+        { "trace_id": "TRC-004", "requirement_id": "REQ-004", "vision_link": ["VIS-004", "VIS-005"], "canvas_link": ["CAN-006", "CAN-013"], "acceptance_criteria": ["AC-010", "AC-011", "AC-012"], "evidence_needed": "Generated node/edge set with relation type + provenance markers.", "status": "missing-evidence", "source_type": "ASSUMPTION" },
+        { "trace_id": "TRC-005", "requirement_id": "REQ-005", "vision_link": ["VIS-004", "VIS-008"], "canvas_link": ["CAN-009", "CAN-011"], "acceptance_criteria": ["AC-013", "AC-014", "AC-015"], "evidence_needed": "Gap-detection output naming >=1 unlinked/weak node + Atlas gap indicator.", "status": "missing-evidence", "source_type": "EXPLICIT" },
+        { "trace_id": "TRC-006", "requirement_id": "REQ-006", "vision_link": ["VIS-007"], "canvas_link": ["CAN-011"], "acceptance_criteria": ["AC-016", "AC-017", "AC-018"], "evidence_needed": "Reproducible MCP HTTP smoke transcript with pass/fail log.", "status": "missing-evidence", "source_type": "EXPLICIT" },
+        { "trace_id": "TRC-007", "requirement_id": "REQ-007", "vision_link": ["VIS-005", "VIS-008"], "canvas_link": ["CAN-009", "CAN-014"], "acceptance_criteria": ["AC-019", "AC-020", "AC-021"], "evidence_needed": "Graph export sample + Atlas render screenshot with stable IDs.", "status": "missing-evidence", "source_type": "ASSUMPTION" },
+        { "trace_id": "TRC-008", "requirement_id": "REQ-008", "vision_link": ["VIS-006", "VIS-011"], "canvas_link": ["CAN-008"], "acceptance_criteria": ["AC-022", "AC-023", "AC-024"], "evidence_needed": "Deferred (post-MVP). Conversion-skill candidate output once built.", "status": "missing-evidence", "source_type": "ASSUMPTION" }
+      ]
+    }
+  },
+  "missing_blocker_ledger": [
+    { "id": "OQ-001", "field": "write_target_source_name", "source_type": "EXPLICIT", "severity": "info", "reason": "RESOLVED: Write-Ziel-Source festgelegt auf 'gbrain-atlas-context' (REQ-003 / NFR-003 / CAN-010).", "source_ref": "OQ-001" },
+    { "id": "OQ-002", "field": "evidence_needed.all_requirements", "source_type": "MISSING", "severity": "warning", "reason": "Keine Evidence-Artefakte (EV-###) definiert; alle TRC-Zeilen stehen auf 'missing-evidence'. Verhindert READY_FOR_AGILETEAM_PLANNING.", "source_ref": "SRC-004" },
+    { "id": "OQ-003", "field": "traceability_source_format", "source_type": "MISSING", "severity": "info", "reason": "Quell-Traceability (SRC-004) hat zerstoerte Tabellen-Spaltentrenner; Inhalte rekonstruiert, Evidence/Source-Type-Spalten ergaenzt.", "source_ref": "SRC-004" },
+    { "id": "OQ-004", "field": "gap_relation_criteria", "source_type": "EXPLICIT", "severity": "info", "reason": "RESOLVED: Gap-Kriterien GAP-C1..GAP-C4 (Knoten ohne typisierte Kante, Kante ohne Provenance, Konfidenz < 0.5, verwaiste Pflicht-Relation) in REQ-005 definiert.", "source_ref": "OQ-004" },
+    { "id": "OQ-005", "field": "user_confirmation", "source_type": "MISSING", "severity": "info", "reason": "Nutzerbestaetigung im aktuellen Kontext nicht erteilt; Readiness bleibt READY_FOR_USER_CONFIRMATION.", "source_ref": "SRC-001" }
+  ],
+  "user_confirmation": {
+    "required": true,
+    "status": "pending-user-confirmation",
+    "confirmation_phrase": "Ich bestaetige, dass Product Canvas und Product Vision meine Absicht korrekt wiedergeben und als Grundlage fuer AgileTeam Planning verwendet werden duerfen.",
+    "confirmed_by_user": false,
+    "source_ref": "SRC-001"
+  }
+}
