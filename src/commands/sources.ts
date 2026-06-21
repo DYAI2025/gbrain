@@ -42,6 +42,7 @@ import {
   addSource as opsAddSource,
   recloneIfMissing,
   SourceOpError,
+  isGoldstandard,
   type SourceRow as OpsSourceRow,
 } from '../core/sources-ops.ts';
 import {
@@ -120,7 +121,7 @@ async function runAdd(engine: BrainEngine, args: string[]): Promise<void> {
   if (!id) {
     console.error(
       'Usage: gbrain sources add <id> [--path <path> | --url <https-url>] ' +
-        '[--name <display>] [--federated|--no-federated] [--clone-dir <path>]',
+        '[--name <display>] [--federated|--no-federated] [--goldstandard|--no-goldstandard] [--clone-dir <path>]',
     );
     process.exit(2);
   }
@@ -129,6 +130,7 @@ async function runAdd(engine: BrainEngine, args: string[]): Promise<void> {
   let remoteUrl: string | undefined;
   let displayName: string | undefined;
   let federated: boolean | null = null;
+  let goldstandard: boolean | null = null;
   let cloneDir: string | undefined;
 
   for (let i = 1; i < args.length; i++) {
@@ -138,6 +140,8 @@ async function runAdd(engine: BrainEngine, args: string[]): Promise<void> {
     if (a === '--name') { displayName = args[++i]; continue; }
     if (a === '--federated') { federated = true; continue; }
     if (a === '--no-federated') { federated = false; continue; }
+    if (a === '--goldstandard') { goldstandard = true; continue; }
+    if (a === '--no-goldstandard') { goldstandard = false; continue; }
     if (a === '--clone-dir') { cloneDir = args[++i]; continue; }
     console.error(`Unknown flag: ${a}`);
     process.exit(2);
@@ -157,6 +161,7 @@ async function runAdd(engine: BrainEngine, args: string[]): Promise<void> {
     localPath,
     remoteUrl,
     federated,
+    goldstandard,
     cloneDir,
   });
 
@@ -181,6 +186,9 @@ async function runAdd(engine: BrainEngine, args: string[]): Promise<void> {
   console.log(
     `  federated: ${fed}${fed ? ' — appears in cross-source default search' : ' — only searched when explicitly named via --source'}`,
   );
+  if (isGoldstandard(created.config)) {
+    console.log(`  goldstandard: true — writes require frontmatter slug/title/type (T-101)`);
+  }
 }
 
 /**
