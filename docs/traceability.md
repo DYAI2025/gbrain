@@ -13,14 +13,20 @@ Feature Slug: `gbrain-atlas-context-system`
 
 | Trace ID | Requirement | Vision Link | Canvas Link | Acceptance Criteria | Evidence Needed | Source Type | Status |
 |---|---|---|---|---|---|---|---|
-| `TRC-001` | `REQ-001` Markdown Input Intake | `VIS-006` | `CAN-007`, `CAN-014` | `AC-001`–`AC-003` | Ingest-Lauflog auf Sample-Markdown (non-destruktiver Parse + Goldstandard-Kandidat) | `EXPLICIT` | `missing-evidence` |
-| `TRC-002` | `REQ-002` Goldstandard Validation | `VIS-004`, `VIS-006` | `CAN-006`, `CAN-009` | `AC-004`–`AC-006` | Validierungsreport auf valide + invalide Fixtures (strukturierte Fehler) | `ASSUMPTION` | `missing-evidence` |
+| `TRC-001` | `REQ-001` Markdown Input Intake | `VIS-006` | `CAN-007`, `CAN-014` | `AC-001`–`AC-003` | **VERIFIED** (Evidence-Sweep 2026-06-21): Ingest non-destruktiv via `parseMarkdown`/`import-file`. `AC-003` Goldstandard-Kandidat hängt an REQ-002 (PARTIAL). | `EXPLICIT` | `linked` |
+| `TRC-002` | `REQ-002` Goldstandard Validation | `VIS-004`, `VIS-006` | `CAN-006`, `CAN-009` | `AC-004`–`AC-006` | **PARTIAL** (Evidence-Sweep): generischer Frontmatter-Validator existiert + verifiziert (`gbrain frontmatter validate`, 8 Codes, strukturierte Fehler), aber KEIN Required-Field-Check (slug/title/type/relations) und NICHT vor dem Write verdrahtet → Goldstandard-Gate unbuilt (`T-101`). | `ASSUMPTION` | `missing-evidence` |
 | `TRC-003` | `REQ-003` Controlled Write | `VIS-009` | `CAN-010` | `AC-007`–`AC-009` | `AC-007` **verifiziert** (Isolation: Write in `gbrain-atlas-context` nicht in `default`/Cross-Source sichtbar). `AC-008` **verifiziert** (`F-001`). `AC-009` **NICHT erfüllt** → `F-002` (kein konsolidierter Audit-Record). | `EXPLICIT` | `missing-evidence` |
-| `TRC-004` | `REQ-004` Semantic/Ontological Linking | `VIS-004`, `VIS-005` | `CAN-006`, `CAN-013` | `AC-010`–`AC-012` | Node/Edge-Set mit Relationstyp + Provenance-Markern | `ASSUMPTION` | `missing-evidence` |
-| `TRC-005` | `REQ-005` Gap Visibility | `VIS-004`, `VIS-008` | `CAN-009`, `CAN-011` | `AC-013`–`AC-015` | Gap-Detection-Output mit ≥1 Gap nach Kriterien `GAP-C1`…`GAP-C4` (OQ-004) + Atlas-Gap-Indikator | `EXPLICIT` | `missing-evidence` |
-| `TRC-006` | `REQ-006` MCP HTTP Smoke | `VIS-007` | `CAN-011` | `AC-016`–`AC-018` | Reproduzierbares MCP-HTTP-Smoke-Transkript mit Pass/Fail-Log | `EXPLICIT` | `missing-evidence` |
-| `TRC-007` | `REQ-007` Atlas Graph Export | `VIS-005`, `VIS-008` | `CAN-009`, `CAN-014` | `AC-019`–`AC-021` | Graph-Export-Sample + Atlas-Render mit stabilen IDs | `ASSUMPTION` | `missing-evidence` |
+| `TRC-004` | `REQ-004` Semantic/Ontological Linking | `VIS-004`, `VIS-005` | `CAN-006`, `CAN-013` | `AC-010`–`AC-012` | **VERIFIED (live)** (Evidence-Sweep): typisierte Kanten + Provenance live reproduziert — 2. Page → `created:1`, `invested_in` aus Verb inferiert, `works_at` aus Frontmatter mit `origin_field`; Relational-Query löst korrekt auf. `created:0` der 1. Page = erwartetes Verhalten, kein Defekt. | `ASSUMPTION` | `linked` |
+| `TRC-005` | `REQ-005` Gap Visibility | `VIS-004`, `VIS-008` | `CAN-009`, `CAN-011` | `AC-013`–`AC-015` | **PARTIAL** (Evidence-Sweep, nur Code): `GAP-C1` (Orphans/Backlink-Gap) bedient, `GAP-C4` teilweise; **`GAP-C2` (Kante ohne Provenance) + `GAP-C3` (Konfidenz<Schwelle) fehlen** (Kanten haben keine Confidence-Spalte). 1/4 Kriterien solide (`T-103`). | `EXPLICIT` | `missing-evidence` |
+| `TRC-006` | `REQ-006` MCP HTTP Smoke | `VIS-007` | `CAN-011` | `AC-016`–`AC-018` | **VERIFIED (live)** (Evidence-Sweep): `serve --http` (PGLite) → `/health` 200, `/mcp` 401→Bearer→200 MCP-konform (SSE). Lücke: kein einzelner benannter Smoke-Befehl, verstreut (`T-104`). | `EXPLICIT` | `linked` |
+| `TRC-007` | `REQ-007` Atlas Graph Export | `VIS-005`, `VIS-008` | `CAN-009`, `CAN-014` | `AC-019`–`AC-021` | **PARTIAL** (Evidence-Sweep): Atlas-App existiert + rendert 3D (`gbrain-atlas/`, react-force-graph-3d, render-ready `graph.json`, stabile IDs). Aber **kein gbrain-Export** — Atlas re-derived den Graph aus gbrains DB (Architektur invertiert, `RISK-006`-Drift) (`T-102`). | `ASSUMPTION` | `missing-evidence` |
 | `TRC-008` | `REQ-008` Multi-Format Skill | `VIS-006`, `VIS-011` | `CAN-008` | `AC-022`–`AC-024` | Deferred (post-MVP): Conversion-Skill-Kandidat-Output, sobald gebaut | `ASSUMPTION` | `missing-evidence` |
+
+> **Status-Legende.** Die `Status`-Spalte nutzt das Traceability-Contract-Enum, das **kein**
+> `verified` kennt. Konvention hier: `linked` = voll verdrahtet **und** im Evidence-Sweep
+> (2026-06-21) belegt; `missing-evidence` = Evidenz unvollständig/offen. Das **maßgebliche
+> Evidenz-Verdikt** steht in der `Evidence Needed`-Spalte (**VERIFIED (live)** / **VERIFIED** /
+> **PARTIAL** / **GAP** / deferred). `T-1xx` = TODO-Referenzen in `TODOS.md`.
 
 ## Coverage
 
@@ -29,7 +35,11 @@ Feature Slug: `gbrain-atlas-context-system`
 - Vision-Linkage: vollständig (jedes REQ ≥1 `VIS-*`).
 - Canvas-Linkage: vollständig (jedes REQ ≥1 `CAN-*`).
 - Acceptance-Criteria-Linkage: vollständig (`AC-001`…`AC-024`, je REQ 3 AC).
-- Evidence-Linkage: **offen (deferred, OQ-002)** — keine `EV-*`-Artefakte; Evidence-Bedarfe pro REQ sind formuliert, werden aber erst beim Bauen/Testen des MVP erbracht. Alle Zeilen `missing-evidence`. Der Nutzer hat Planning trotz deferred Evidence ausdrücklich bestätigt (OQ-005); Evidence + `F-002` bleiben dokumentierte offene Planning-Inputs, kein struktureller Traceability-Block.
+- Evidence-Linkage (Stand nach Evidence-Sweep 2026-06-21):
+  - **VERIFIED**: `REQ-001` Ingest, `REQ-004` Linking (live), `REQ-006` MCP-HTTP-Smoke (live). `REQ-003`: `AC-007`+`AC-008` verifiziert.
+  - **PARTIAL**: `REQ-002` (Validator ja, Goldstandard-Gate nein), `REQ-005` (GAP-C1 ja, C2/C3 fehlen), `REQ-007` (Atlas rendert, aber kein gbrain-Export → invertiert).
+  - **GAP/offen**: `REQ-003`/`AC-009` (`F-002` Audit-Record), `REQ-008` deferred, und die o.g. PARTIAL-Restlücken (`T-101`…`T-104`).
+  - Keine `EV-*`-Artefakte als formale Belegobjekte; die Sweep-Verdikte ersetzen sie für die geprüften REQ. Der Nutzer hat Planning trotz Restlücken bestätigt (OQ-005); offene Punkte bleiben dokumentierte Planning-Inputs.
 
 ## Aufgelöste offene Punkte
 
@@ -62,6 +72,14 @@ Feature Slug: `gbrain-atlas-context-system`
   - `write_through` wurde **übersprungen** (`skipped: source_repo_belongs_to_other_source`) — eine DB-only Source ohne `local_path` hat keinen Provenance-Schreibpfad.
 - **Schluss:** `AC-009` ist mit der aktuellen Plattform **nicht erfüllbar**, ohne dass GBrain einen Put-Level-Audit-Record (source+slug+timestamp+result an einer Stelle) emittiert. Echter Gap, kein bloßes `missing-evidence`.
 - **Status:** offen — Feature-Bedarf (Audit-Record für `put_page`), nicht durch Test schließbar. `AC-007` + `AC-008` dagegen verifiziert.
+
+### `F-003` — Evidence-Sweep gegen die reale Plattform (2026-06-21)
+
+- **Was:** 5 parallele Capability-Probes (Multi-Agent-Workflow) gegen den gbrain-Code/Runtime, um die MVP-REQ über die Spec hinaus an der **realen Plattform** zu prüfen. Mehrere Probes mit **Live-Reproduktion** in Wegwerf-Brains (`GBRAIN_HOME=/tmp`, danach gelöscht; User-Brain unangetastet).
+- **Verifiziert (live):** `REQ-004` Linking (typisierte Kanten + Provenance reproduziert: `invested_in` aus Verb, `works_at` aus Frontmatter; Relational-Query löst auf). `REQ-006` MCP-HTTP-Smoke (`serve --http` → `/health` 200, Bearer→`/mcp` 200 MCP-konform/SSE). `REQ-001` Ingest non-destruktiv.
+- **PARTIAL:** `REQ-002` (generischer Validator ja, Goldstandard-Required-Field-Gate nein, nicht vor Write verdrahtet — `T-101`). `REQ-005` (`GAP-C1` ja, `GAP-C2`/`GAP-C3` fehlen, Kanten ohne Confidence-Spalte — `T-103`). `REQ-007` (Atlas-App `gbrain-atlas/` existiert + rendert 3D, aber **kein gbrain-Export** — Atlas re-derived den Graph aus der DB, `RISK-006`-Drift — `T-102`).
+- **Korrektur:** Das früher beobachtete `auto_links:{created:0}` war **korrektes** Verhalten (1. Page, keine Ziel-Pages), kein Defekt — live widerlegt.
+- **Schluss:** Die MVP-Maschinerie existiert größtenteils und funktioniert; Restarbeit ist **Integration + 3 echte Lücken** (`T-101`…`T-104` + `F-002`), kein Greenfield. Folge-TODOs in `TODOS.md`.
 
 ## Roadmap-Ableitung (aus SRC-004, informativ)
 

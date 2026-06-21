@@ -1,5 +1,52 @@
 # TODOS
 
+## gbrain-atlas-context MVP gaps (filed 2026-06-21, from vision-distance evidence sweep F-003)
+
+Surfaced by a 5-probe capability sweep against the real platform (several live-reproduced).
+Most MVP machinery exists + works (REQ-001 ingest, REQ-004 linking, REQ-006 MCP-HTTP-smoke all
+verified live); the remaining work is integration + these real gaps. See finding `F-003` and the
+per-row verdicts in `docs/traceability.md`.
+
+- [ ] **`T-101` P2 — Goldstandard required-field validator, wired BEFORE write (REQ-002).**
+  **What:** A pre-write validator that asserts presence of the Goldstandard required frontmatter
+  fields (`slug`, `title`, `type`, `relations`) and returns structured errors, gating the write
+  (AC-006: invalid metadata blocks persist).
+  **Why:** The generic validator `gbrain frontmatter validate` (8 structural codes in
+  `src/core/markdown.ts`) exists and works, but proven-empirically it passes a file missing
+  slug/type/relations (`"ok":true`), and `importFromContent` (`src/core/import-file.ts:306`) parses
+  WITHOUT `{validate:true}` — so nothing enforces required fields before persist. `relations` is
+  referenced nowhere in validation code.
+  **Start:** add a required-field + `relations`-shape check (schema-pack aware) and thread it into
+  the `put_page` write path (`src/core/operations.ts`) before persist; block on failure per AC-006.
+- [ ] **`T-102` P2 — gbrain owns a `graph export` boundary that Atlas consumes blind (REQ-007).**
+  **What:** A gbrain op/command emitting `{nodes, edges}` with STABLE IDs as a render-ready export,
+  so the Atlas viewer consumes a contract instead of reaching into gbrain's DB.
+  **Why:** The Atlas app exists and renders 3D (`gbrain-atlas/`, react-force-graph-3d), but it
+  RE-DERIVES the graph from gbrain's engine/DB via relative imports + raw SQL on links/pages — the
+  exact `RISK-006` "Atlas/GBrain-Doppelmodell" drift the canvas warned about. The architecture is
+  inverted vs the requirement (gbrain should export; Atlas should consume blind).
+  **Start:** define the export shape (mirror `gbrain-atlas/probe/graph.json`: node `{id,…}`, edge
+  `{source,target,type,weight,provenance}`), add a `graph export` op, point Atlas at it, drop the
+  in-Atlas re-derivation. Architectural decision — confirm export shape first.
+- [ ] **`T-103` P3 — Surface gap criteria GAP-C2 + GAP-C3 (REQ-005).**
+  **What:** Report edges with missing provenance (`GAP-C2`) and relations with confidence below a
+  threshold (`GAP-C3`) as gaps.
+  **Why:** Evidence sweep: `GAP-C1` (orphans/backlink-gap) is well served and `GAP-C4` partial, but
+  `GAP-C2` is essentially absent (nothing surfaces null-provenance edges as a gap) and `GAP-C3` is
+  not computable — links/edges carry NO confidence column (confidence exists only for
+  facts/takes/search ranking, not typed relations). 1 of 4 gap criteria solid today.
+  **Start:** add an edge-confidence column + a gap report that scans links for null `link_source`
+  (C2) and below-threshold confidence (C3); extend `orphans`/`freshness reconcile` or a new op.
+- [ ] **`T-104` P3 — Package the MCP HTTP smoke as one named turnkey command (REQ-006).**
+  **What:** A single labeled `gbrain mcp smoke` (or `serve --http` + curl-assert wrapper) that runs
+  on the zero-config PGLite default and is documented as THE MVP success signal.
+  **Why:** The capability is verified working live (PGLite `serve --http` → `/health` 200, Bearer →
+  `/mcp` 200 MCP/SSE), but it's scattered: the no-DB smoke is a unit test (`test/http-transport.test.ts`),
+  the e2e is Postgres-gated (skips on PGLite), and the `smoke-test` skill / `scripts/smoke-test-mcp.ts`
+  don't do MCP-over-HTTP. The live path also needs manual token minting (PGLite single-writer).
+  **Start:** wrap a PGLite-capable HTTP smoke (seed token in-process/SQL) into one command + the
+  `smoke-test` skill; document it as the MVP signal.
+
 ## put_page write-audit record (filed 2026-06-21, from gbrain-atlas-context intake F-002)
 
 - [ ] **P2 — Emit a consolidated write-audit record for `put_page` (and the `ctx.dryRun` write class).**
