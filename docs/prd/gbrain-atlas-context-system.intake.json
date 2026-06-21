@@ -89,7 +89,8 @@
     { "id": "OQ-002", "field": "evidence_needed.all_requirements", "source_type": "MISSING", "severity": "warning", "reason": "Keine Evidence-Artefakte (EV-###) definiert; alle TRC-Zeilen stehen auf 'missing-evidence'. Verhindert READY_FOR_AGILETEAM_PLANNING.", "source_ref": "SRC-004" },
     { "id": "OQ-003", "field": "traceability_source_format", "source_type": "MISSING", "severity": "info", "reason": "Quell-Traceability (SRC-004) hat zerstoerte Tabellen-Spaltentrenner; Inhalte rekonstruiert, Evidence/Source-Type-Spalten ergaenzt.", "source_ref": "SRC-004" },
     { "id": "OQ-004", "field": "gap_relation_criteria", "source_type": "EXPLICIT", "severity": "info", "reason": "RESOLVED: Gap-Kriterien GAP-C1..GAP-C4 (Knoten ohne typisierte Kante, Kante ohne Provenance, Konfidenz < 0.5, verwaiste Pflicht-Relation) in REQ-005 definiert.", "source_ref": "OQ-004" },
-    { "id": "OQ-005", "field": "user_confirmation", "source_type": "MISSING", "severity": "info", "reason": "Nutzerbestaetigung im aktuellen Kontext nicht erteilt; Readiness bleibt READY_FOR_USER_CONFIRMATION.", "source_ref": "SRC-001" }
+    { "id": "OQ-005", "field": "user_confirmation", "source_type": "MISSING", "severity": "info", "reason": "Nutzerbestaetigung im aktuellen Kontext nicht erteilt; Readiness bleibt READY_FOR_USER_CONFIRMATION.", "source_ref": "SRC-001" },
+    { "id": "F-001", "field": "REQ-003.AC-008.dry_run", "source_type": "EXPLICIT", "severity": "info", "reason": "RESOLVED (test-evidence): 'gbrain put --dry-run' schrieb real (AC-008-Verletzung). Root cause: parseOpArgs verwarf den globalen --dry-run-Flag, weil put_page (und ~16 ctx.dryRun-Ops) keinen dry_run-Param deklarieren; ctx.dryRun blieb false. Fix in src/cli.ts (dry_run als globaler Boolean) + test/cli-args.test.ts. Verifiziert: Dry-run liefert {dry_run:true}, kein Write. AC-007/AC-009 weiterhin offen.", "source_ref": "REQ-003" }
   ],
   "user_confirmation": {
     "required": true,

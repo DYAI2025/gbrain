@@ -15,7 +15,7 @@ Feature Slug: `gbrain-atlas-context-system`
 |---|---|---|---|---|---|---|---|
 | `TRC-001` | `REQ-001` Markdown Input Intake | `VIS-006` | `CAN-007`, `CAN-014` | `AC-001`–`AC-003` | Ingest-Lauflog auf Sample-Markdown (non-destruktiver Parse + Goldstandard-Kandidat) | `EXPLICIT` | `missing-evidence` |
 | `TRC-002` | `REQ-002` Goldstandard Validation | `VIS-004`, `VIS-006` | `CAN-006`, `CAN-009` | `AC-004`–`AC-006` | Validierungsreport auf valide + invalide Fixtures (strukturierte Fehler) | `ASSUMPTION` | `missing-evidence` |
-| `TRC-003` | `REQ-003` Controlled Write | `VIS-009` | `CAN-010` | `AC-007`–`AC-009` | Dry-run-Preview + Audit-Log-Eintrag (Source/Slug/Timestamp/Result) | `EXPLICIT` | `missing-evidence` |
+| `TRC-003` | `REQ-003` Controlled Write | `VIS-009` | `CAN-010` | `AC-007`–`AC-009` | `AC-008` **verifiziert** (Dry-run-Smoke nach Fix `F-001` → `{dry_run:true}`, kein Write). `AC-007` Source-Isolation + `AC-009` Audit-Log noch offen. | `EXPLICIT` | `missing-evidence` |
 | `TRC-004` | `REQ-004` Semantic/Ontological Linking | `VIS-004`, `VIS-005` | `CAN-006`, `CAN-013` | `AC-010`–`AC-012` | Node/Edge-Set mit Relationstyp + Provenance-Markern | `ASSUMPTION` | `missing-evidence` |
 | `TRC-005` | `REQ-005` Gap Visibility | `VIS-004`, `VIS-008` | `CAN-009`, `CAN-011` | `AC-013`–`AC-015` | Gap-Detection-Output mit ≥1 Gap nach Kriterien `GAP-C1`…`GAP-C4` (OQ-004) + Atlas-Gap-Indikator | `EXPLICIT` | `missing-evidence` |
 | `TRC-006` | `REQ-006` MCP HTTP Smoke | `VIS-007` | `CAN-011` | `AC-016`–`AC-018` | Reproduzierbares MCP-HTTP-Smoke-Transkript mit Pass/Fail-Log | `EXPLICIT` | `missing-evidence` |
@@ -37,6 +37,18 @@ Feature Slug: `gbrain-atlas-context-system`
 - `OQ-004` (Gap-Kriterien): **aufgelöst** → `GAP-C1` Knoten ohne typisierte Kante, `GAP-C2` Kante ohne Provenance, `GAP-C3` Konfidenz < Cutoff (default 0.5), `GAP-C4` verwaiste Pflicht-Relation (REQ-005).
 - `OQ-002` (Evidence): **deferred** — Soll-Belege formuliert, Erbringung beim MVP-Bau.
 - `OQ-005` (User-Confirmation): offen — Bestätigungssatz noch nicht erteilt.
+
+## Findings (Test-Evidenz)
+
+### `F-001` — `gbrain put --dry-run` schrieb real (AC-008-Verletzung), behoben
+
+- **Betrifft:** `REQ-003` / `AC-008` ("dry-run → kein persistenter Write, Preview zurück").
+- **Symptom:** `gbrain put <slug> --source gbrain-atlas-context --dry-run` legte die Page **persistent** an (Page-Count 0→1) statt eine Preview zurückzugeben. Reproduziert am 2026-06-21.
+- **Root Cause:** `ctx.dryRun` ist ein globales Context-Feld (`makeContext` liest `params.dry_run`), das von ~16 mutierenden Ops geehrt wird — aber von **keiner** als Parameter deklariert ist. Der generische Arg-Parser (`src/cli.ts:parseOpArgs`) setzte `params[key]` nur bei Op-Deklaration; `--dry-run` wurde damit stillschweigend verworfen (und konnte im Footgun-Fall sogar das Folge-Token als Wert schlucken). `ctx.dryRun` blieb `false` → echter Write. Klassen-Bug, nicht put_page-spezifisch.
+- **Fix:** `parseOpArgs` erkennt `dry_run` nun als globalen Boolean unabhängig von der Op-Deklaration (`src/cli.ts`). Behebt den gesamten `ctx.dryRun`-Op-Kreis.
+- **Test:** `test/cli-args.test.ts` — 2 neue Fälle (RED→GREEN), inkl. Footgun-Regression (kein Token-Swallow).
+- **Verifikation:** Nach Fix liefert der Dry-run `{ "dry_run": true, "action": "put_page", "slug": … }`; `get` auf den Slug → `page_not_found` (nichts geschrieben). `AC-008` damit lokal **verifiziert**. `AC-007` (Write nur in konfigurierte Source) und `AC-009` (Audit-Log Source/Slug/Timestamp/Result) bleiben offen.
+- **Status:** Code-Fix lokal verifiziert; Commit/Push separat. Kein `/ship` ohne Freigabe.
 
 ## Roadmap-Ableitung (aus SRC-004, informativ)
 
