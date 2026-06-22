@@ -210,6 +210,12 @@ export async function isSourceGoldstandard(
   sourceId: string | undefined | null,
 ): Promise<boolean> {
   if (!sourceId) return false;
+  // Fail safe for degenerate engines (e.g. lightweight test stubs) that don't
+  // implement executeRaw: with no queryable sources table there is no
+  // goldstandard policy to enforce, so treat as non-goldstandard instead of
+  // throwing in the put_page write path. Keeps the gate a true no-op for every
+  // non-goldstandard caller, as documented.
+  if (typeof engine.executeRaw !== 'function') return false;
   const row = await fetchSourceRow(engine, sourceId);
   return row ? isGoldstandard(row.config) : false;
 }
