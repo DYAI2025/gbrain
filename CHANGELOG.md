@@ -2,6 +2,49 @@
 
 All notable changes to GBrain will be documented in this file.
 
+## [0.42.48.0] - 2026-06-22
+
+**Mark a source "goldstandard" and gbrain stops saving half-finished pages — it checks for a slug, title, and type before it writes, and before a dry-run can mislead you.** Some sources are meant to hold curated, well-formed knowledge, not scratch notes. Until now nothing enforced that: a page missing its slug or type saved anyway, and a dry-run handed back a cheerful preview for metadata that would never have validated. This release adds an opt-in, per-source gate. Flag a source as goldstandard and every write into it must carry non-empty `slug`, `title`, and `type` frontmatter (and a `relations` value that is an array when present); anything missing is rejected with a specific, field-named error, before the page is persisted and before the dry-run returns. Every other source is untouched: the gate is a true no-op for sources you did not flag.
+
+### How to turn it on
+```bash
+# flag a source as goldstandard (or --no-goldstandard to clear it)
+gbrain sources add my-canon --goldstandard
+# writes into it now require slug/title/type frontmatter:
+gbrain put my-canon/some-page --source my-canon            # rejected if frontmatter is incomplete
+gbrain put my-canon/some-page --source my-canon --dry-run  # surfaces the same errors, not a fake "ok"
+```
+
+### What you would see
+| Write into... | Frontmatter | Result |
+|---|---|---|
+| a goldstandard source | missing `type` | rejected: `goldstandard_validation_failed`, naming the missing field |
+| a goldstandard source | slug + title + type present | saved normally |
+| any non-goldstandard source | anything | unchanged, no gate, no extra check |
+
+### Things to watch
+- The gate is opt-in per source; existing sources stay unflagged until you run `--goldstandard`.
+- A dry-run of invalid metadata now returns the validation errors instead of a preview. That is the point, but it is a behavior change if you scripted against the old preview shape.
+
+### To take advantage of v0.42.48.0
+`gbrain upgrade` should do this automatically. No migration or schema change is required; the gate is code-level and opt-in.
+
+1. Flag a source as goldstandard when you want enforced metadata:
+   ```bash
+   gbrain sources add <name> --goldstandard
+   ```
+2. Verify the gate engages:
+   ```bash
+   gbrain put <name>/probe --source <name> --dry-run   # names any missing slug/title/type
+   ```
+3. If a write that should pass is rejected, or one that should fail slips through, please file an issue at https://github.com/garrytan/gbrain/issues with the `gbrain doctor` output and the exact command.
+
+### Added
+- **Source-scoped goldstandard write gate (REQ-002).** A source whose config carries `goldstandard: true` enforces required frontmatter (`slug`, `title`, `type`; `relations` array-if-present) on every `put_page`, throwing `goldstandard_validation_failed` before persist and before the dry-run return (AC-004 through AC-006). `gbrain sources add --goldstandard|--no-goldstandard` sets the flag; `parseMarkdown(..., { goldstandard: true })` carries the required-field validator and `isSourceGoldstandard` gates the write path.
+
+### Fixed
+- **The goldstandard check is a true no-op off the goldstandard path.** `isSourceGoldstandard` returns false when the engine cannot query sources (e.g. lightweight callers without `executeRaw`) instead of throwing in the `put_page` write path, so the ~20 non-goldstandard write callers stay exactly as before.
+
 ## [0.42.47.0] - 2026-06-16
 
 ### Added

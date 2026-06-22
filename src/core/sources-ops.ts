@@ -141,6 +141,11 @@ export interface AddSourceOpts {
   remoteUrl?: string;
   federated?: boolean | null;
   /**
+   * T-101 (REQ-002): flag this source goldstandard — writes into it are gated on
+   * required frontmatter (slug/title/type). Stored in source config; default off.
+   */
+  goldstandard?: boolean | null;
+  /**
    * Override clone destination. Defaults to $GBRAIN_HOME/clones/<id>/.
    * Only honored when remoteUrl is set.
    */
@@ -186,6 +191,33 @@ function parseConfig(config: unknown): Record<string, unknown> {
 
 function isFederated(config: unknown): boolean {
   return parseConfig(config).federated === true;
+}
+
+/**
+ * T-101 (REQ-002): a source flagged `goldstandard: true` enforces required
+ * frontmatter (slug/title/type) on writes into it. Mirrors `isFederated`.
+ */
+export function isGoldstandard(config: unknown): boolean {
+  return parseConfig(config).goldstandard === true;
+}
+
+/**
+ * Async: is the given source id flagged goldstandard? Returns false for
+ * unknown/undefined ids so non-goldstandard writes short-circuit cheaply.
+ */
+export async function isSourceGoldstandard(
+  engine: BrainEngine,
+  sourceId: string | undefined | null,
+): Promise<boolean> {
+  if (!sourceId) return false;
+  // Fail safe for degenerate engines (e.g. lightweight test stubs) that don't
+  // implement executeRaw: with no queryable sources table there is no
+  // goldstandard policy to enforce, so treat as non-goldstandard instead of
+  // throwing in the put_page write path. Keeps the gate a true no-op for every
+  // non-goldstandard caller, as documented.
+  if (typeof engine.executeRaw !== 'function') return false;
+  const row = await fetchSourceRow(engine, sourceId);
+  return row ? isGoldstandard(row.config) : false;
 }
 
 function getRemoteUrl(config: unknown): string | null {
@@ -403,6 +435,9 @@ export async function addSource(
     if (opts.federated !== null && opts.federated !== undefined) {
       config.federated = opts.federated;
     }
+    if (opts.goldstandard !== null && opts.goldstandard !== undefined) {
+      config.goldstandard = opts.goldstandard;
+    }
     const displayName = opts.name ?? opts.id;
 
     try {
@@ -450,6 +485,9 @@ export async function addSource(
     const config: Record<string, unknown> = {};
     if (opts.federated !== null && opts.federated !== undefined) {
       config.federated = opts.federated;
+    }
+    if (opts.goldstandard !== null && opts.goldstandard !== undefined) {
+      config.goldstandard = opts.goldstandard;
     }
     const displayName = opts.name ?? opts.id;
     await engine.executeRaw(

@@ -230,4 +230,62 @@ describe('parseMarkdown validation surface', () => {
     const nb = parsed.errors!.find(e => e.code === 'NULL_BYTES');
     expect(nb?.line).toBeGreaterThanOrEqual(1);
   });
+
+  describe('goldstandard mode (T-101)', () => {
+    const gs = { goldstandard: true } as const;
+
+    test('goldstandard populates errors[] even without validate', () => {
+      const md = `${fence}\ntitle: hi\ntype: concept\n${fence}\n\nbody`; // missing slug
+      const parsed = parseMarkdown(md, undefined, gs);
+      expect(parsed.errors).toBeDefined();
+    });
+
+    test('missing slug → MISSING_REQUIRED_FIELD(slug)', () => {
+      const md = `${fence}\ntitle: hi\ntype: concept\n${fence}\n\nbody`;
+      const parsed = parseMarkdown(md, undefined, gs);
+      expect(parsed.errors!.some(e => e.code === 'MISSING_REQUIRED_FIELD' && e.field === 'slug')).toBe(true);
+    });
+
+    test('missing title → MISSING_REQUIRED_FIELD(title)', () => {
+      const md = `${fence}\nslug: x\ntype: concept\n${fence}\n\nbody`;
+      const parsed = parseMarkdown(md, undefined, gs);
+      expect(parsed.errors!.some(e => e.code === 'MISSING_REQUIRED_FIELD' && e.field === 'title')).toBe(true);
+    });
+
+    test('missing type → MISSING_REQUIRED_FIELD(type)', () => {
+      const md = `${fence}\nslug: x\ntitle: hi\n${fence}\n\nbody`;
+      const parsed = parseMarkdown(md, undefined, gs);
+      expect(parsed.errors!.some(e => e.code === 'MISSING_REQUIRED_FIELD' && e.field === 'type')).toBe(true);
+    });
+
+    test('all required present → no MISSING_REQUIRED_FIELD', () => {
+      const md = `${fence}\nslug: x\ntitle: hi\ntype: concept\n${fence}\n\nbody`;
+      const parsed = parseMarkdown(md, undefined, gs);
+      expect(parsed.errors!.some(e => e.code === 'MISSING_REQUIRED_FIELD')).toBe(false);
+    });
+
+    test('relations absent → no relations error', () => {
+      const md = `${fence}\nslug: x\ntitle: hi\ntype: concept\n${fence}\n\nbody`;
+      const parsed = parseMarkdown(md, undefined, gs);
+      expect(parsed.errors!.some(e => e.code === 'INVALID_RELATIONS_SHAPE')).toBe(false);
+    });
+
+    test('relations present as array → no shape error', () => {
+      const md = `${fence}\nslug: x\ntitle: hi\ntype: concept\nrelations:\n  - to: y\n${fence}\n\nbody`;
+      const parsed = parseMarkdown(md, undefined, gs);
+      expect(parsed.errors!.some(e => e.code === 'INVALID_RELATIONS_SHAPE')).toBe(false);
+    });
+
+    test('relations present as non-array → INVALID_RELATIONS_SHAPE', () => {
+      const md = `${fence}\nslug: x\ntitle: hi\ntype: concept\nrelations: nope\n${fence}\n\nbody`;
+      const parsed = parseMarkdown(md, undefined, gs);
+      expect(parsed.errors!.some(e => e.code === 'INVALID_RELATIONS_SHAPE' && e.field === 'relations')).toBe(true);
+    });
+
+    test('goldstandard OFF (validate only): missing fields do NOT add MISSING_REQUIRED_FIELD', () => {
+      const md = `${fence}\ntitle: hi\n${fence}\n\nbody`; // missing slug + type
+      const parsed = parseMarkdown(md, undefined, { validate: true });
+      expect(parsed.errors!.some(e => e.code === 'MISSING_REQUIRED_FIELD')).toBe(false);
+    });
+  });
 });

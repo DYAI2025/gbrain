@@ -803,6 +803,31 @@ const put_page: Operation = {
       }
     }
 
+    // T-101 (REQ-002): source-scoped Goldstandard write gate. A source flagged
+    // goldstandard:true enforces required frontmatter (slug/title/type;
+    // relations array-if-present) BEFORE persist (AC-006) and BEFORE the dry-run
+    // return, so a dry-run of invalid metadata surfaces the errors instead of a
+    // misleading preview-ok. No-op (one tiny source-config read) for every other
+    // source — the ~20 non-goldstandard put_page callers are untouched.
+    {
+      const { isSourceGoldstandard } = await import('./sources-ops.ts');
+      if (await isSourceGoldstandard(ctx.engine, ctx.sourceId)) {
+        const { parseMarkdown } = await import('./markdown.ts');
+        const { errors } = parseMarkdown((p.content as string) ?? '', slug + '.md', {
+          validate: true,
+          goldstandard: true,
+          expectedSlug: slug,
+        });
+        if (errors && errors.length > 0) {
+          throw new OperationError(
+            'goldstandard_validation_failed',
+            `Goldstandard validation failed for '${slug}' in source '${ctx.sourceId}': ` +
+              errors.map((e) => `${e.code}${e.field ? `(${e.field})` : ''}: ${e.message}`).join('; '),
+          );
+        }
+      }
+    }
+
     if (ctx.dryRun) return { dry_run: true, action: 'put_page', slug: p.slug };
     // Skip embedding when the AI gateway has no embedding provider configured.
     // Checks all auth env vars for the resolved provider, not just OPENAI_API_KEY,
