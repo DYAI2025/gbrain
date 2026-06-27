@@ -2,12 +2,14 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import type { BrainEngine } from '../core/engine.ts';
-import { operations } from '../core/operations.ts';
+import { operations, OperationError } from '../core/operations.ts';
 import { VERSION } from '../version.ts';
 import { buildToolDefs } from './tool-defs.ts';
 import { dispatchToolCall, validateParams, buildOperationContext } from './dispatch.ts';
 import { getBrainHotMemoryMeta } from '../core/facts/meta-hook.ts';
 import { loadConfig } from '../core/config.ts';
+import { executeRawJsonb } from '../core/sql-query.ts';
+import { serializeError } from '../core/errors.ts';
 import {
   resolveSocketPath,
   startResolveIpcServer,
@@ -34,24 +36,95 @@ export async function startMcpServer(engine: BrainEngine) {
   // gbrain ops are synchronous, so we return the legacy `{ content, isError? }`
   // shape and cast through `any` (the SDK accepts it via the ServerResult union).
   server.setRequestHandler(CallToolRequestSchema, async (request: any): Promise<any> => {
+    const startTime = Date.now();
     const { name, arguments: params } = request.params;
-    // v0.28: stdio MCP has no per-token auth (local pipe). Default the
-    // takes-holder allow-list to ['world'] so agent-facing callers don't
-    // see private hunches via takes_list / takes_search / query. Operators
-    // who want stdio to see everything should call ops directly via
-    // `gbrain call <op>` (sets remote=false in src/cli.ts).
-    return dispatchToolCall(engine, name, params, {
-      remote: true,
-      takesHoldersAllowList: ['world'],
-      // v0.31: source defaults to 'default' for stdio (no per-token scope).
-      // Operators who want a different source on stdio MCP should set
-      // GBRAIN_SOURCE in the env or use --source via `gbrain call`.
-      sourceId: process.env.GBRAIN_SOURCE || 'default',
-      // v0.31 (eD3): _meta.brain_hot_memory injection so Claude Desktop /
-      // Code see the brain's relevant hot memory automatically alongside
-      // every tool-call response. Best-effort; absorbs errors.
-      metaHook: getBrainHotMemoryMeta,
-    });
+    const op = operations.find(o => o.name === name);
+    let agentName = 'stdio';
+    let tokenName = 'stdio';
+    let agentIdParam: string | undefined = undefined;
+
+    // Extract agent_id from params if present
+    if (params && typeof params === 'object' && 'agent_id' in params) {
+      agentIdParam = String(params.agent_id);
+      // Use agent_id as agent_name for logging
+      if (agentIdParam) {
+        agentName = agentIdParam;
+      }
+    }
+
+    // Check if operation is mutating and require agent_id
+    if (op && op.mutating) {
+      if (!agentIdParam) {
+        // Throw an error if agent_id is missing for a mutating operation
+        const latency = Date.now() - startTime;
+        // Log the error attempt
+        try {
+          await executeRawJsonb(
+            engine,
+            `INSERT INTO mcp_request_log (token_name, agent_name, operation, latency_ms, status, error_message, params)
+             VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+            [tokenName, agentName, name, latency, 'error', 'Missing required argument: agent_id', params ? [params] : [null]],
+          );
+        } catch { /* best effort */ }
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ error: 'missing_argument', message: 'Missing required argument: agent_id' }) }],
+          isError: true,
+        };
+      }
+    }
+
+    let toolResult: Awaited<ReturnType<typeof dispatchToolCall>>;
+    try {
+      toolResult = await dispatchToolCall(engine, name, params as Record<string, unknown> | undefined, {
+        remote: true,
+        takesHoldersAllowList: ['world'],
+        sourceId: process.env.GBRAIN_SOURCE || 'default',
+        metaHook: getBrainHotMemoryMeta,
+      });
+    } catch (e) {
+      // dispatchToolCall absorbs OperationError and returns isError:true; only unexpected throws land here.
+      const latency = Date.now() - startTime;
+      const errorPayload = serializeError(e);
+      try {
+        await executeRawJsonb(
+          engine,
+          `INSERT INTO mcp_request_log (token_name, agent_name, operation, latency_ms, status, error_message, params)
+           VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+          [tokenName, agentName, name, latency, 'error', errorPayload.message, params ? [params] : [null]],
+        );
+      } catch { /* best effort */ }
+      return { content: [{ type: 'text', text: JSON.stringify({ error: errorPayload }) }], isError: true };
+    }
+
+    const latency = Date.now() - startTime;
+    if (toolResult.isError) {
+      // Extract error message from toolResult
+      let errMsg = 'unknown_error';
+      try {
+        const parsed = JSON.parse(toolResult.content[0]?.text ?? '{}');
+        errMsg = parsed.error?.message ?? parsed.message ?? errMsg;
+      } catch { /* ignore */ }
+      try {
+        await executeRawJsonb(
+          engine,
+          `INSERT INTO mcp_request_log (token_name, agent_name, operation, latency_ms, status, error_message, params)
+           VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+          [tokenName, agentName, name, latency, 'error', errMsg, params ? [params] : [null]],
+        );
+      } catch { /* best effort */ }
+      return toolResult;
+    }
+
+    // Successful tool call
+    try {
+      await executeRawJsonb(
+        engine,
+        `INSERT INTO mcp_request_log (token_name, agent_name, operation, latency_ms, status, params)
+         VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
+        [tokenName, agentName, name, latency, 'success', params ? [params] : [null]],
+      );
+    } catch { /* best effort */ }
+    return toolResult;
   });
 
   const transport = new StdioServerTransport();
@@ -70,7 +143,7 @@ export async function startMcpServer(engine: BrainEngine) {
       const defaultSource = process.env.GBRAIN_SOURCE || 'default';
       resolveServer = await startResolveIpcServer(
         resolveSocket,
-        (req) =>
+        (req) => {
           resolveEntitiesToPointers(
             engine,
             req.sourceId || defaultSource,
@@ -80,7 +153,8 @@ export async function startMcpServer(engine: BrainEngine) {
               maxPointers: req.maxPointers,
               suppression: req.suppression,
             },
-          ),
+          );
+        },
         // The IPC resolve path IS the ambient reflex channel. Logging happens
         // at DELIVERY (post-write), not inside the resolver — a block the
         // client's 250ms budget abandoned was never injected, and counting it
@@ -99,8 +173,8 @@ export async function startMcpServer(engine: BrainEngine) {
   const shutdown = (reason: string, code = 0) => {
     if (shuttingDown) return;
     shuttingDown = true;
-    process.stderr.write(`[gbrain-serve] shutdown: ${reason}\n`);
-    try { resolveServer?.close(); } catch { /* noop */ }
+    process.stderr.write(`[gbrain-serve] shutdown: ${reason}\\n`);
+    try { resolveServer?.close(); } catch { /* noop */ };
     if (resolveSocket) cleanupStaleSocket(resolveSocket);
     Promise.resolve(engine.disconnect?.())
       .catch(() => {})
